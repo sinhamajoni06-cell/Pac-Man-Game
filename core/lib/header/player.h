@@ -3,6 +3,7 @@
 #include <optional>
 #include <string>
 #include <vector>
+#include "map_box.h"
 
 enum class Direction { None, Up, Down, Left, Right };
 
@@ -20,6 +21,7 @@ public:
     void setPosition(sf::Vector2f p) { m_pos = p; }
     void setScale(float s)           { m_scale = s; }
     void setSpeed(float pxPerSec)    { m_speed = pxPerSec; }
+    void setMapBox(const MapBox* box) { m_box = box; }
     sf::Vector2f getPosition() const { return m_pos; }
 
     void update(float dt);
@@ -37,6 +39,8 @@ private:
     Animation m_up, m_down, m_left, m_right;
     Direction m_dir     = Direction::Right;
     Direction m_lastDir = Direction::None;
+    Direction m_wanted  = Direction::Right;   // direction the player asked for
+    const MapBox* m_box = nullptr;
     bool      m_moving  = false;
     float     m_speed   = 240.f;
     float     m_scale   = 1.f;
