@@ -95,8 +95,9 @@ Player::Animation& Player::current() {
 
 void Player::setDirection(Direction d) {
     if (d == Direction::None) return;
-    m_dir = d;
+    m_wanted = d;
     m_moving = true;
+    if (!m_box) m_dir = d;      // with a map, the turn happens in update() when the way is free
 }
 
 void Player::handleInput() {
@@ -107,8 +108,41 @@ void Player::handleInput() {
     else if (K::isKeyPressed(K::Key::Right) || K::isKeyPressed(K::Key::D)) setDirection(Direction::Right);
 }
 
+namespace {
+sf::Vector2f dirVec(Direction d) {
+    switch (d) {
+        case Direction::Up:    return {0.f, -1.f};
+        case Direction::Down:  return {0.f,  1.f};
+        case Direction::Left:  return {-1.f, 0.f};
+        case Direction::Right: return {1.f,  0.f};
+        default:               return {0.f,  0.f};
+    }
+}
+}
+
 void Player::update(float dt) {
     if (!m_sprite) return;
+
+    bool advancing = false;
+
+    if (m_moving) {
+        if (m_box) {
+            // 1. Turn as soon as the wanted direction is free (key press is remembered)
+            if (m_wanted != m_dir) {
+                sf::Vector2f p = m_pos;
+                if (m_box->tryTurn(p, dirVec(m_wanted))) {
+                    m_pos = p;
+                    m_dir = m_wanted;
+                }
+            }
+            // 2. Move forward until a wall stops us
+            advancing = m_box->move(m_pos, dirVec(m_dir) * (m_speed * dt));
+        } else {
+            m_pos += dirVec(m_dir) * (m_speed * dt);
+            advancing = true;
+        }
+    }
+
     Animation& anim = current();
     if (anim.frames.empty()) return;
 
@@ -118,19 +152,11 @@ void Player::update(float dt) {
         m_timer = 0.f;
     }
 
-    if (m_moving) {
+    if (advancing) {                   // animation freezes while blocked by a wall
         m_timer += dt;
         while (m_timer >= anim.delays[m_frame]) {
             m_timer -= anim.delays[m_frame];
             m_frame = (m_frame + 1) % anim.frames.size();
-        }
-
-        switch (m_dir) {
-            case Direction::Up:    m_pos.y -= m_speed * dt; break;
-            case Direction::Down:  m_pos.y += m_speed * dt; break;
-            case Direction::Left:  m_pos.x -= m_speed * dt; break;
-            case Direction::Right: m_pos.x += m_speed * dt; break;
-            default: break;
         }
     }
 
