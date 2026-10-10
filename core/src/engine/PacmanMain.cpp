@@ -3,6 +3,29 @@
 #include "player.h"
 #include "map.h"
 #include "map_box.h"
+#include "eat_system.h"
+
+// Keeps the 800x600 game world in the right proportions when the window is
+// resized or maximized (black bars appear if the window shape is different)
+static void applyLetterbox(sf::RenderWindow& window, sf::Vector2u size)
+{
+    const float worldW = 800.f, worldH = 600.f;
+    float windowRatio = static_cast<float>(size.x) / static_cast<float>(size.y);
+    float worldRatio  = worldW / worldH;
+
+    sf::FloatRect viewport({0.f, 0.f}, {1.f, 1.f});
+    if (windowRatio > worldRatio) {            // window is wider: bars left and right
+        viewport.size.x     = worldRatio / windowRatio;
+        viewport.position.x = (1.f - viewport.size.x) / 2.f;
+    } else {                                   // window is taller: bars top and bottom
+        viewport.size.y     = windowRatio / worldRatio;
+        viewport.position.y = (1.f - viewport.size.y) / 2.f;
+    }
+
+    sf::View view(sf::FloatRect({0.f, 0.f}, {worldW, worldH}));
+    view.setViewport(viewport);
+    window.setView(view);
+}
 
 int main()
 {
@@ -12,7 +35,12 @@ int main()
     Map gameMap;
     if (!gameMap.load("main/assets/graphic/game"))
         return 1;
-    gameMap.fitToWindow(window.getSize());
+    gameMap.fitToWindow({800, 600});
+
+    EatSystem eatSystem;
+    if (!eatSystem.load("main/assets/graphic/game"))
+        return 1;
+    eatSystem.setTransform(gameMap.getPosition(), gameMap.getScale());
 
     MapBox mapBox;
     if (!mapBox.load("main/assets/graphic/game"))
@@ -37,18 +65,24 @@ int main()
     while (window.isOpen())
     {
         float dt = clock.restart().asSeconds();
+        // (blinking now lives in EatSystem)
 
         while (const std::optional event = window.pollEvent())
         {
             if (event->is<sf::Event::Closed>())
                 window.close();
+
+            if (const auto* resized = event->getIf<sf::Event::Resized>())
+                applyLetterbox(window, resized->size);
         }
 
         player.handleInput();
         player.update(dt);
+        eatSystem.update(dt, player.getPosition());
 
         window.clear(sf::Color::Black);
         gameMap.draw(window);
+        eatSystem.draw(window);
         player.draw(window);
         window.display();
     }
