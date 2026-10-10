@@ -25,10 +25,11 @@ int main()
     if (!player.load("main/assets/graphic/game/Pac-man"))
         return 1;
     // Start spot: center of the map, in the row below the ghost house (map pixel 113, 188)
-    player.setPosition(gameMap.getPosition() + sf::Vector2f(113.f, 188.f) * gameMap.getScale());
+    player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
     player.setMapBox(&mapBox);
     player.setDirection(Direction::Left);   // already moving left at launch
-    player.setScale(2.f);
+    player.setScale(gameMap.getScale());   // sprite scaled together with the maze
+    player.setSpeed(60.f * gameMap.getScale());   // arcade speed: ~60 map pixels per second
 
     sf::Clock clock;
 
