@@ -175,5 +175,18 @@ void Player::update(float dt) {
 }
 
 void Player::draw(sf::RenderTarget& target) {
-    if (m_sprite) target.draw(*m_sprite);
+    if (!m_sprite) return;
+    if (!m_box) { target.draw(*m_sprite); return; }
+
+    // Clip to the map so Pac-Man disappears into the tunnel
+    // instead of showing up in the black margin around the maze
+    sf::Vector2f ts(target.getSize());
+    sf::FloatRect r = m_box->getMapRect();
+    sf::View old = target.getView();
+    sf::View clip(r);
+    clip.setViewport(sf::FloatRect({r.position.x / ts.x, r.position.y / ts.y},
+                                   {r.size.x / ts.x,     r.size.y / ts.y}));
+    target.setView(clip);
+    target.draw(*m_sprite);
+    target.setView(old);
 }
