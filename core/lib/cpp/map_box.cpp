@@ -1,5 +1,6 @@
 #include "map_box.h"
 
+#include <algorithm>
 #include <cmath>
 #include <iostream>
 
@@ -100,4 +101,86 @@ bool MapBox::tryTurn(sf::Vector2f& pos, sf::Vector2f dir) const {
         }
     }
     return false;
+}
+
+float MapBox::lane(float v) const {
+    return m_laneOrigin + m_tile * std::round((v - m_laneOrigin) / m_tile);
+}
+
+// Can the hitbox travel one full tile from (cx, cy) in direction (dx, dy)?
+bool MapBox::tileOpen(float cx, float cy, int dx, int dy) const {
+    for (int i = 0; i <= 16; ++i) {
+        if (blockedMap(cx + dx * i * 0.5f, cy + dy * i * 0.5f)) return false;
+    }
+    return true;
+}
+
+bool MapBox::advance(sf::Vector2f& pos, int& dir, int wanted, float distance) const {
+    static const int dx[5]       = {0,  0, 0, -1, 1};
+    static const int dy[5]       = {0, -1, 1,  0, 0};
+    static const int opposite[5] = {0,  2, 1,  4, 3};
+
+    if (dir < 1 || dir > 4) return false;
+    float units = distance / m_scale;                     // map pixels this frame
+    if (units <= 0.f) return false;
+
+    int   n   = static_cast<int>(std::ceil(units / 0.25f));
+    float sub = units / static_cast<float>(n);            // small steps: never skip a wall
+
+    sf::Vector2f m = toMap(pos);
+    bool advanced = false;
+
+    for (int i = 0; i < n; ++i) {
+        // 1. Direction change
+        if (wanted > 0 && wanted != dir) {
+            if (wanted == opposite[dir]) {
+                // reversing is always instant (if there is room)
+                if (!blockedMap(m.x + dx[wanted] * sub, m.y + dy[wanted] * sub)) dir = wanted;
+            } else {
+                // turning: only near a lane crossing, and only if that way is open
+                bool  horiz = dir >= 3;
+                float a = horiz ? m.x : m.y;
+                float c = lane(a);
+                if (std::fabs(a - c) <= m_corner) {
+                    float cx = horiz ? c : lane(m.x);
+                    float cy = horiz ? lane(m.y) : c;
+                    if (tileOpen(cx, cy, dx[wanted], dy[wanted])) dir = wanted;
+                }
+            }
+        }
+
+        // 2. Slide toward the center of the lane (cornering / always aligned)
+        bool horiz = dir >= 3;
+        float off = horiz ? (lane(m.y) - m.y) : (lane(m.x) - m.x);
+        float g   = std::clamp(off, -sub, sub);
+        if (g != 0.f) {
+            float gx = horiz ? m.x : m.x + g;
+            float gy = horiz ? m.y + g : m.y;
+            if (!blockedMap(gx, gy)) { m.x = gx; m.y = gy; }
+        }
+
+        // 3. Move forward, but never pass a lane center when the next tile is a wall
+        float a  = horiz ? m.x : m.y;                  // position along the motion axis
+        float sg = static_cast<float>(horiz ? dx[dir] : dy[dir]);
+        float c  = lane(a);
+        float cx = horiz ? c : lane(m.x);
+        float cy = horiz ? lane(m.y) : c;
+        float na = a + sg * sub;
+
+        if (!tileOpen(cx, cy, dx[dir], dy[dir])) {
+            if ((a - c) * sg >= -1e-3f) continue;      // at the center, wall ahead: stop here
+            if ((na - c) * sg > 0.f) na = c;           // would overshoot: stop exactly on the center
+        }
+
+        float fx = horiz ? na : m.x;
+        float fy = horiz ? m.y : na;
+        if (!blockedMap(fx, fy)) {
+            if (fx != m.x || fy != m.y) advanced = true;
+            m.x = fx;
+            m.y = fy;
+        }
+    }
+
+    pos = fromMap(m);
+    return advanced;
 }
