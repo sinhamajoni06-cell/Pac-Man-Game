@@ -16,6 +16,7 @@ bool MapBox::load(const std::string& dir) {
 
     m_w = img.getSize().x;
     m_h = img.getSize().y;
+    m_mazeW = 0;
     m_sum.assign(static_cast<size_t>(m_w + 1) * (m_h + 1), 0);
 
     for (unsigned y = 0; y < m_h; ++y) {
@@ -23,7 +24,8 @@ bool MapBox::load(const std::string& dir) {
             sf::Color c = img.getPixel({x, y});
             bool nonBlack = c.a > 0 && (c.r + c.g + c.b) > 0;
             bool isDot    = c.r > 200 && c.b < 200;      // pellets are (255,183,174)
-            int wall = (nonBlack && !isDot) ? 1 : 0;     // walls blue, door pink-white
+            int wall = (nonBlack && !isDot) ? 1 : 0;
+            if (wall && x + 1 > m_mazeW) m_mazeW = x + 1;   // remember the maze's right edge     // walls blue, door pink-white
 
             size_t i = static_cast<size_t>(y + 1) * (m_w + 1) + (x + 1);
             m_sum[i] = wall
@@ -44,8 +46,15 @@ bool MapBox::blockedMap(float mx, float my) const {
     int x1 = static_cast<int>(std::ceil (mx + half - 0.001f));
     int y1 = static_cast<int>(std::ceil (my + half - 0.001f));
 
-    if (x0 < 0 || y0 < 0 || x1 > static_cast<int>(m_w) || y1 > static_cast<int>(m_h))
-        return true;                                      // outside the map
+    if (y0 < 0 || y1 > static_cast<int>(m_h)) return true;          // above / below the map
+    if (x0 < 0 || x1 > static_cast<int>(m_mazeW)) {
+        // Past the left/right edge: only allowed inside the tunnel row (teleport gate)
+        if (my - half < m_tunnelY - m_tile - 0.001f || my + half > m_tunnelY + m_tile + 0.001f)
+            return true;
+        x0 = std::max(x0, 0);
+        x1 = std::min(x1, static_cast<int>(m_mazeW));
+        if (x0 >= x1) return false;                                 // completely outside: free
+    }
 
     auto S = [&](int x, int y) { return m_sum[static_cast<size_t>(y) * (m_w + 1) + x]; };
     return (S(x1, y1) - S(x0, y1) - S(x1, y0) + S(x0, y0)) > 0;
@@ -179,6 +188,12 @@ bool MapBox::advance(sf::Vector2f& pos, int& dir, int wanted, float distance) co
             m.x = fx;
             m.y = fy;
         }
+
+        // Teleport: leaving one side of the tunnel comes out of the other side
+        float margin = std::max(m_wrapMargin, m_size / 2.f);   // how far out before the jump
+        float fullW  = static_cast<float>(m_mazeW);
+        if (m.x < -margin)             m.x += fullW + 2.f * margin;
+        else if (m.x > fullW + margin) m.x -= fullW + 2.f * margin;
     }
 
     pos = fromMap(m);
