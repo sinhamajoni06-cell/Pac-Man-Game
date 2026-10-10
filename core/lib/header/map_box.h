@@ -37,6 +37,18 @@ public:
     bool advance(sf::Vector2f& pos, int& dir, int wanted, float distance) const;
     void setCornerWindow(float mapPixels) { m_corner = mapPixels; }
 
+    // Row (map pixels) where the left/right teleport tunnel sits
+    void setTunnelRow(float mapY) { m_tunnelY = mapY; }
+
+    // How far past the map edge (map pixels) Pac-Man travels before he jumps to the
+    // other side. Set it to half the sprite width so the jump happens while he is hidden.
+    void setWrapMargin(float mapPixels) { m_wrapMargin = mapPixels; }
+
+    // The map's rectangle in window coordinates (used to clip Pac-Man)
+    sf::FloatRect getMapRect() const {
+        return sf::FloatRect(m_origin, sf::Vector2f(m_mazeW * m_scale, m_h * m_scale));
+    }
+
 private:
     bool blockedMap(float mx, float my) const;
     bool tileOpen(float cx, float cy, int dx, int dy) const;
@@ -53,4 +65,7 @@ private:
     float m_corner    = 3.f;    // how early/late a turn is still accepted (map pixels)
     float m_laneOrigin = 12.f;  // first lane center in the map image
     float m_tile       = 8.f;   // distance between lane centers
+    float m_tunnelY    = 116.f; // center row of the side tunnels (map pixels)
+    unsigned m_mazeW = 0;       // real maze width (the image has empty padding on the right)
+    float m_wrapMargin = 0.f;   // 0 = use half the hitbox size
 };
