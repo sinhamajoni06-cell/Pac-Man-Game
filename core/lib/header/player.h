@@ -39,7 +39,10 @@ private:
     Animation m_up, m_down, m_left, m_right;
     Direction m_dir     = Direction::Right;
     Direction m_lastDir = Direction::None;
-    Direction m_wanted  = Direction::Right;   // direction the player asked for
+    Direction m_wanted  = Direction::None;    // direction of the key held right now
+    std::vector<Direction> m_held;            // held keys, newest last
+    bool m_keyDown[4]   = {false, false, false, false};   // Up, Down, Left, Right last frame
+    sf::Vector2f m_snap{0.f, 0.f};                         // remaining glide into a corridor
     const MapBox* m_box = nullptr;
     bool      m_moving  = false;
     float     m_speed   = 240.f;
