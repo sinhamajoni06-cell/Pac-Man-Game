@@ -1,6 +1,8 @@
 #include "player.h"
 
 #include <fstream>
+#include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <iterator>
 
@@ -95,17 +97,29 @@ Player::Animation& Player::current() {
 
 void Player::setDirection(Direction d) {
     if (d == Direction::None) return;
-    m_wanted = d;
-    m_moving = true;
-    if (!m_box) m_dir = d;      // with a map, the turn happens in update() when the way is free
+    m_dir = d;            // starting heading
+    m_moving = true;      // from now on Pac-Man never stops by himself
 }
 
 void Player::handleInput() {
     namespace K = sf::Keyboard;
-    if      (K::isKeyPressed(K::Key::Up)    || K::isKeyPressed(K::Key::W)) setDirection(Direction::Up);
-    else if (K::isKeyPressed(K::Key::Down)  || K::isKeyPressed(K::Key::S)) setDirection(Direction::Down);
-    else if (K::isKeyPressed(K::Key::Left)  || K::isKeyPressed(K::Key::A)) setDirection(Direction::Left);
-    else if (K::isKeyPressed(K::Key::Right) || K::isKeyPressed(K::Key::D)) setDirection(Direction::Right);
+
+    const bool down[4] = {
+        K::isKeyPressed(K::Key::Up)    || K::isKeyPressed(K::Key::W),
+        K::isKeyPressed(K::Key::Down)  || K::isKeyPressed(K::Key::S),
+        K::isKeyPressed(K::Key::Left)  || K::isKeyPressed(K::Key::A),
+        K::isKeyPressed(K::Key::Right) || K::isKeyPressed(K::Key::D)
+    };
+    const Direction dirs[4] = {Direction::Up, Direction::Down, Direction::Left, Direction::Right};
+
+    // Ordered list of held keys: the newest held key is the wanted direction.
+    // Releasing a key removes it, which cancels a pending turn.
+    for (int i = 0; i < 4; ++i) {
+        auto it = std::find(m_held.begin(), m_held.end(), dirs[i]);
+        if (down[i] && it == m_held.end())       m_held.push_back(dirs[i]);
+        else if (!down[i] && it != m_held.end()) m_held.erase(it);
+    }
+    m_wanted = m_held.empty() ? Direction::None : m_held.back();
 }
 
 namespace {
@@ -127,17 +141,12 @@ void Player::update(float dt) {
 
     if (m_moving) {
         if (m_box) {
-            // 1. Turn as soon as the wanted direction is free (key press is remembered)
-            if (m_wanted != m_dir) {
-                sf::Vector2f p = m_pos;
-                if (m_box->tryTurn(p, dirVec(m_wanted))) {
-                    m_pos = p;
-                    m_dir = m_wanted;
-                }
-            }
-            // 2. Move forward until a wall stops us
-            advancing = m_box->move(m_pos, dirVec(m_dir) * (m_speed * dt));
+            // Direction enum order (None, Up, Down, Left, Right) matches MapBox's 0..4 codes
+            int dir = static_cast<int>(m_dir);
+            advancing = m_box->advance(m_pos, dir, static_cast<int>(m_wanted), m_speed * dt);
+            m_dir = static_cast<Direction>(dir);
         } else {
+            if (m_wanted != Direction::None) m_dir = m_wanted;
             m_pos += dirVec(m_dir) * (m_speed * dt);
             advancing = true;
         }
