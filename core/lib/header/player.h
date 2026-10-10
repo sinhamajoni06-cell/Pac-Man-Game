@@ -24,6 +24,11 @@ public:
     void setMapBox(const MapBox* box) { m_box = box; }
     sf::Vector2f getPosition() const { return m_pos; }
 
+    // Half the sprite width in window pixels (used to time the tunnel teleport)
+    float getHalfWidth() const {
+        return m_right.frames.empty() ? 0.f : m_right.frames[0].getSize().x * m_scale / 2.f;
+    }
+
     void update(float dt);
     void draw(sf::RenderTarget& target);
 
