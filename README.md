@@ -12,7 +12,6 @@ Pacman-project/
 │       └── graphic/
 │           └── game/
 │               ├── game.png
-│               ├── map.png                # walls only
 │               ├── Pac-man/
 │               │   ├── Pac-Man (Up).gif
 │               │   ├── Pac-Man (Down).gif
