@@ -31,8 +31,16 @@ public:
     // a small misalignment, `pos` is nudged into the corridor. Returns true on success.
     bool tryTurn(sf::Vector2f& pos, sf::Vector2f dir) const;
 
+    // Arcade-style movement along the corridor lanes.
+    // dir / wanted: 0 = none, 1 = up, 2 = down, 3 = left, 4 = right
+    // Returns true if Pac-Man moved forward (false = blocked by a wall).
+    bool advance(sf::Vector2f& pos, int& dir, int wanted, float distance) const;
+    void setCornerWindow(float mapPixels) { m_corner = mapPixels; }
+
 private:
     bool blockedMap(float mx, float my) const;
+    bool tileOpen(float cx, float cy, int dx, int dy) const;
+    float lane(float v) const;
     sf::Vector2f toMap(sf::Vector2f p) const   { return (p - m_origin) / m_scale; }
     sf::Vector2f fromMap(sf::Vector2f m) const { return m_origin + m * m_scale; }
 
@@ -42,4 +50,7 @@ private:
     float m_scale     = 1.f;
     float m_size      = 6.f;
     float m_tolerance = 3.f;
+    float m_corner    = 3.f;    // how early/late a turn is still accepted (map pixels)
+    float m_laneOrigin = 12.f;  // first lane center in the map image
+    float m_tile       = 8.f;   // distance between lane centers
 };
