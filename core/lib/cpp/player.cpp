@@ -183,9 +183,14 @@ void Player::draw(sf::RenderTarget& target) {
     sf::Vector2f ts(target.getSize());
     sf::FloatRect r = m_box->getMapRect();
     sf::View old = target.getView();
+
+    // Where the map rectangle lands on screen with the current (letterboxed) view
+    sf::Vector2f p0(target.mapCoordsToPixel(r.position, old));
+    sf::Vector2f p1(target.mapCoordsToPixel(r.position + r.size, old));
+
     sf::View clip(r);
-    clip.setViewport(sf::FloatRect({r.position.x / ts.x, r.position.y / ts.y},
-                                   {r.size.x / ts.x,     r.size.y / ts.y}));
+    clip.setViewport(sf::FloatRect({p0.x / ts.x, p0.y / ts.y},
+                                   {(p1.x - p0.x) / ts.x, (p1.y - p0.y) / ts.y}));
     target.setView(clip);
     target.draw(*m_sprite);
     target.setView(old);
