@@ -9,8 +9,8 @@ bool MapBox::load(const std::string& dir) {
     if (!base.empty() && base.back() != '/' && base.back() != '\\') base += '/';
 
     sf::Image img;
-    if (!img.loadFromFile(base + "map_full_.png")) {
-        std::cerr << "[MapBox] Cannot load: " << base << "map_full_.png\n";
+    if (!img.loadFromFile(base + "map/map_full_.png")) {
+        std::cerr << "[MapBox] Cannot load: " << base << "map/map_full_.png\n";
         return false;
     }
 
