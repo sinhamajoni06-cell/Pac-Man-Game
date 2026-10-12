@@ -4,6 +4,7 @@
 #include "map.h"
 #include "map_box.h"
 #include "eat_system.h"
+#include "enemy/enemy_manager.h"
 
 // Keeps the 800x600 game world in the right proportions when the window is
 // resized or maximized (black bars appear if the window shape is different)
@@ -46,7 +47,16 @@ int main()
     if (!mapBox.load("main/assets/graphic/game"))
         return 1;
     mapBox.setTransform(gameMap.getPosition(), gameMap.getScale());
-    mapBox.setHitboxSize(6.f);        // Pac-Man's hitbox, in map pixels
+    mapBox.setHitboxSize(6.f);
+
+    const int totalDots = eatSystem.foodLeft() + eatSystem.powerLeft();
+
+    EnemyManager enemies;
+    if (!enemies.load("main/assets/graphic/game"))    // folders: Blinky, Pinky, Inky, Clyde
+        return 1;
+    enemies.setMap(&mapBox);
+    enemies.setTransform(gameMap.getPosition(), gameMap.getScale());
+    enemies.reset();        // Pac-Man's hitbox, in map pixels
 
     Player player;
     // change this path to where your GIF folder really is
@@ -78,11 +88,24 @@ int main()
 
         player.handleInput();
         player.update(dt);
-        eatSystem.update(dt, player.getPosition());
+        EatResult eaten = eatSystem.update(dt, player.getPosition());
+        if (eaten.power > 0) enemies.frighten();            // power pellet: ghosts turn blue
+
+        int dotsEaten = totalDots - (eatSystem.foodLeft() + eatSystem.powerLeft());
+        EnemyResult hit = enemies.update(dt, player.getPosition(),
+                                         static_cast<int>(player.getDirection()), dotsEaten);
+        eatSystem.addScore(hit.score);
+
+        if (hit.playerHit) {                                // caught: restart positions
+            enemies.reset();
+            player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
+            player.setDirection(Direction::Left);
+        }
 
         window.clear(sf::Color::Black);
         gameMap.draw(window);
         eatSystem.draw(window);
+        enemies.draw(window);
         player.draw(window);
         window.display();
     }
