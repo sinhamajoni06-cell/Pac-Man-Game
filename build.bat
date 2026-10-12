@@ -31,7 +31,7 @@ set "MAIN_FILE=core/src/engine/PacmanMain.cpp"
 set "INCLUDES=-I core/lib/header -I core/src -I core/src/engine -I %MSYS2_ROOT%/ucrt64/include"
 
 :: C) Shared source files (every .cpp in this folder is compiled, not recursive)
-set "SOURCES=core/lib/cpp/*.cpp"
+set "SOURCES=core/lib/cpp/*.cpp','core/lib/cpp/enemy/*.cpp"
 
 :: D) Libraries (-L / -l)
 set "LIBS=-L %MSYS2_ROOT%/ucrt64/lib -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system -lopengl32 -lwinmm -lgdi32 -lfreetype"
