@@ -37,6 +37,7 @@ public:
 
 private:
     static constexpr int   kPhaseCount = 7;
+    static constexpr float kHitbox = 8.f;   // ghosts closer than this (map pixels) can't travel stacked
     static constexpr float kSchedule[kPhaseCount] = {7.f, 20.f, 7.f, 20.f, 5.f, 20.f, 5.f};
 
     Blinky m_blinky;
