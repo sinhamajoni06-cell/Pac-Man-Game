@@ -34,6 +34,7 @@ public:
     void reset();                                      // put every dot back (new level)
 
     int  getScore()  const { return m_score; }
+    void addScore(int points) { m_score += points; }   // e.g. points for eating ghosts
     int  foodLeft()  const { return m_foodLeft; }
     int  powerLeft() const { return m_powerLeft; }
     bool allEaten()  const { return m_foodLeft + m_powerLeft == 0; }
