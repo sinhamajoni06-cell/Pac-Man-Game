@@ -59,14 +59,48 @@ EnemyResult EnemyManager::update(float dt, sf::Vector2f playerWindowPos, int pla
     if (dotsEaten != m_lastDots) { m_lastDots = dotsEaten; m_idleTimer = 0.f; }
     else                         { m_idleTimer += dt; }
 
-    for (int i = 0; i < 3; ++i)
-        if (house[i]->state() == Ghost::State::InHouse && dotsEaten >= need[i]) house[i]->release();
+    bool someoneLeaving = false;
+    for (Ghost* g : m_ghosts)
+        if (g->state() == Ghost::State::Leaving) someoneLeaving = true;
 
-    if (m_idleTimer > 4.f) {                              // no dots for a while: push one out
+    for (int i = 0; i < 3 && !someoneLeaving; ++i) {
+        if (house[i]->state() == Ghost::State::InHouse && dotsEaten >= need[i]) {
+            house[i]->release();
+            someoneLeaving = true;
+        }
+    }
+
+    if (m_idleTimer > 4.f && !someoneLeaving) {                              // no dots for a while: push one out
         for (int i = 0; i < 3; ++i) {
             if (house[i]->state() == Ghost::State::InHouse) { house[i]->release(); break; }
         }
         m_idleTimer = 0.f;
+    }
+
+    // 2b. Hitbox: two ghosts can't travel stacked in the same direction.
+    //     The one behind slows down until there is a gap. Passing in opposite
+    //     directions, or crossing at a junction, is still allowed (like the arcade).
+    for (Ghost* g : m_ghosts) g->setSpeedLimit(0.f);
+    for (int i = 0; i < 4; ++i) {
+        for (int j = i + 1; j < 4; ++j) {
+            Ghost* a = m_ghosts[i];
+            Ghost* b = m_ghosts[j];
+            if (a->state() != Ghost::State::Active || b->state() != Ghost::State::Active) continue;
+            if (a->direction() != b->direction()) continue;              // passing or crossing: allowed
+
+            sf::Vector2f d = b->position() - a->position();
+            if (d.x * d.x + d.y * d.y >= kHitbox * kHitbox) continue;    // far enough apart
+
+            // Who is behind, measured along the travel direction?
+            static const float dirX[5] = {0.f, 0.f, 0.f, -1.f, 1.f};
+            static const float dirY[5] = {0.f, -1.f, 1.f, 0.f, 0.f};
+            int dir = a->direction();
+            float along = d.x * dirX[dir] + d.y * dirY[dir];             // > 0: b is ahead of a
+
+            Ghost* behind = (along > 0.f) ? a : b;                       // exact tie: b waits
+            Ghost* front  = (along > 0.f) ? b : a;
+            behind->setSpeedLimit(front->speed() * 0.8f);
+        }
     }
 
     // 3. Move everyone
