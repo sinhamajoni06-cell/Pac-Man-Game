@@ -37,6 +37,9 @@ public:
     bool advance(sf::Vector2f& pos, int& dir, int wanted, float distance) const;
     void setCornerWindow(float mapPixels) { m_corner = mapPixels; }
 
+    // Can the hitbox travel one tile from (cx, cy) in direction (dx, dy)? (map pixels)
+    bool tileOpenMap(float cx, float cy, int dx, int dy) const { return tileOpen(cx, cy, dx, dy); }
+
     // Row (map pixels) where the left/right teleport tunnel sits
     void setTunnelRow(float mapY) { m_tunnelY = mapY; }
 
