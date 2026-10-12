@@ -58,6 +58,12 @@ public:
     sf::Vector2f position()   const { return m_pos; }      // map pixels
     bool canBeHit() const { return m_state == State::Active || m_state == State::Leaving; }
 
+    int   direction() const { return m_dir; }            // 1 up, 2 down, 3 left, 4 right
+    float speed()     const { return currentSpeed(); }   // map pixels per second
+
+    // Used by EnemyManager to keep ghosts from stacking (0 = no limit)
+    void  setSpeedLimit(float limit) { m_speedLimit = limit; }
+
 protected:
     // Targets are in TILE coordinates (tile = 8x8 map pixels)
     virtual sf::Vector2f chaseTarget(const GhostContext& ctx, sf::Vector2f myTile) const = 0;
@@ -113,4 +119,5 @@ private:
     std::vector<sf::Vector2f> m_path;
     size_t m_pathIdx = 0;
     float  m_bobDir = -1.f;
+    float  m_speedLimit = 0.f;   // 0 = no limit (set by EnemyManager)
 };
