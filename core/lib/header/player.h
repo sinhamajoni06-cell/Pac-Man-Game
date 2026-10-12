@@ -22,6 +22,12 @@ public:
     void setScale(float s)           { m_scale = s; }
     void setSpeed(float pxPerSec)    { m_speed = pxPerSec; }
     void setMapBox(const MapBox* box) { m_box = box; }
+
+    // Death animation (plays once, like the arcade)
+    void startDeath();
+    void revive();                                   // back to normal after the animation
+    bool isDying() const       { return m_dying; }
+    bool deathFinished() const { return m_dying && m_deathDone; }
     sf::Vector2f getPosition() const { return m_pos; }
 
     // Half the sprite width in window pixels (used to time the tunnel teleport)
@@ -45,7 +51,12 @@ private:
     Direction m_dir     = Direction::Right;
     Direction m_lastDir = Direction::None;
     Direction m_wanted  = Direction::None;    // direction of the key held right now
-    std::vector<Direction> m_held;            // held keys, newest last
+    std::vector<Direction> m_held;
+
+    Animation m_death;
+    bool m_dying = false;
+    bool m_deathDone = false;
+    void updateDeath(float dt);            // held keys, newest last
     bool m_keyDown[4]   = {false, false, false, false};   // Up, Down, Left, Right last frame
     sf::Vector2f m_snap{0.f, 0.f};                         // remaining glide into a corridor
     const MapBox* m_box = nullptr;
