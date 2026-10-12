@@ -76,6 +76,8 @@ bool Player::load(const std::string& dir) {
            && loadGif(base + "Pac-Man (Right).gif", m_right);
     if (!ok) return false;
 
+    loadGif(base + "Pac-Man (Death Animation).gif", m_death);   // optional: skipped if missing
+
     m_sprite.emplace(m_right.frames[0]);
     sf::Vector2u size = m_right.frames[0].getSize();
     m_sprite->setOrigin({size.x / 2.f, size.y / 2.f});   // position = center
@@ -137,6 +139,8 @@ sf::Vector2f dirVec(Direction d) {
 void Player::update(float dt) {
     if (!m_sprite) return;
 
+    if (m_dying) { updateDeath(dt); return; }
+
     bool advancing = false;
 
     if (m_moving) {
@@ -176,6 +180,7 @@ void Player::update(float dt) {
 
 void Player::draw(sf::RenderTarget& target) {
     if (!m_sprite) return;
+    if (m_dying && m_deathDone) return;                  // he has disappeared
     if (!m_box) { target.draw(*m_sprite); return; }
 
     // Clip to the map so Pac-Man disappears into the tunnel
@@ -194,4 +199,47 @@ void Player::draw(sf::RenderTarget& target) {
     target.setView(clip);
     target.draw(*m_sprite);
     target.setView(old);
+}
+void Player::startDeath() {
+    m_dying = true;
+    m_deathDone = false;
+    m_frame = 0;
+    m_timer = 0.f;
+    m_held.clear();
+    m_wanted = Direction::None;
+}
+
+void Player::revive() {
+    m_dying = false;
+    m_deathDone = false;
+    m_frame = 0;
+    m_timer = 0.f;
+    m_lastDir = Direction::None;      // forces the normal sprite to refresh
+    m_held.clear();
+    m_wanted = Direction::None;
+}
+
+void Player::updateDeath(float dt) {
+    if (!m_sprite) return;
+    if (m_death.frames.empty()) { m_deathDone = true; return; }   // no GIF: skip the animation
+
+    if (!m_deathDone) {
+        m_timer += dt;
+        while (m_timer >= m_death.delays[m_frame]) {
+            if (m_frame + 1 >= m_death.frames.size()) {            // last frame shown: finished
+                m_deathDone = true;
+                m_timer = 0.f;
+                break;
+            }
+            m_timer -= m_death.delays[m_frame];
+            ++m_frame;
+        }
+    }
+
+    const sf::Texture& tex = m_death.frames[m_frame];
+    m_sprite->setTexture(tex, true);
+    sf::Vector2u sz = tex.getSize();
+    m_sprite->setOrigin({sz.x / 2.f, sz.y / 2.f});                // the death GIF may have another size
+    m_sprite->setPosition(m_pos);
+    m_sprite->setScale({m_scale, m_scale});
 }
