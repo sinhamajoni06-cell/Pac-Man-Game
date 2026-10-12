@@ -217,7 +217,11 @@ void Ghost::update(float dt, const GhostContext& ctx) {
 
         case State::Active:
         case State::Eaten:
-            stepActive(currentSpeed() * dt, ctx);
+            {
+                float v = currentSpeed();
+                if (m_speedLimit > 0.f) v = std::min(v, m_speedLimit);   // keep a gap to the ghost ahead
+                stepActive(v * dt, ctx);
+            }
             break;
     }
 
