@@ -72,6 +72,11 @@ int main()
 
     sf::Clock clock;
 
+    // Playing -> Caught (freeze) -> Dying (animation) -> Respawn (pause) -> Playing
+    enum class GameState { Playing, Caught, Dying, Respawn };
+    GameState gameState = GameState::Playing;
+    float stateTimer = 0.f;
+
     while (window.isOpen())
     {
         float dt = clock.restart().asSeconds();
@@ -87,16 +92,34 @@ int main()
         }
 
         player.handleInput();
-        player.update(dt);
-        EatResult eaten = eatSystem.update(dt, player.getPosition());
+        if (gameState != GameState::Caught) player.update(dt);
+        EatResult eaten;
+        if (gameState == GameState::Playing)
+            eaten = eatSystem.update(dt, player.getPosition());
         if (eaten.power > 0) enemies.frighten();            // power pellet: ghosts turn blue
 
         int dotsEaten = totalDots - (eatSystem.foodLeft() + eatSystem.powerLeft());
-        EnemyResult hit = enemies.update(dt, player.getPosition(),
+        EnemyResult hit;
+        if (gameState == GameState::Playing) hit = enemies.update(dt, player.getPosition(),
                                          static_cast<int>(player.getDirection()), dotsEaten);
         eatSystem.addScore(hit.score);
 
-        if (hit.playerHit) {                                // caught: restart positions
+                if (hit.playerHit && gameState == GameState::Playing) {
+            gameState = GameState::Caught;            // freeze everything for a moment
+            stateTimer = 0.f;
+        }
+
+        stateTimer += dt;
+        if (gameState == GameState::Caught && stateTimer >= 1.0f) {
+            gameState = GameState::Dying;             // ghosts vanish, Pac-Man dies
+            stateTimer = 0.f;
+            player.startDeath();
+        } else if (gameState == GameState::Dying && player.deathFinished()) {
+            gameState = GameState::Respawn;           // short pause on the empty maze
+            stateTimer = 0.f;
+        } else if (gameState == GameState::Respawn && stateTimer >= 1.0f) {
+            gameState = GameState::Playing;
+            player.revive();
             enemies.reset();
             player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
             player.setDirection(Direction::Left);
@@ -105,7 +128,8 @@ int main()
         window.clear(sf::Color::Black);
         gameMap.draw(window);
         eatSystem.draw(window);
-        enemies.draw(window);
+        if (gameState == GameState::Playing || gameState == GameState::Caught)
+            enemies.draw(window);
         player.draw(window);
         window.display();
     }
