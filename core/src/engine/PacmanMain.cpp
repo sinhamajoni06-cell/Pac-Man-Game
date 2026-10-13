@@ -8,6 +8,8 @@
 #include "hud.h"
 #include "pickup_system.h"
 #include "title_screen.h"
+#include "audio_system.h"
+#include <algorithm>
 
 // Keeps the 800x600 game world in the right proportions when the window is
 // resized or maximized (black bars appear if the window shape is different)
@@ -94,6 +96,11 @@ int main()
     player.setScale(gameMap.getScale());   // sprite scaled together with the maze
     player.setSpeed(60.f * gameMap.getScale());   // arcade speed: ~60 map pixels per second
 
+    Audio& audio = Audio::get();
+    audio.load("main/assets/audio/SFX");     // missing files only print a warning
+    bool paused = false;
+    bool extraLifeGiven = false;
+
     sf::Clock clock;
 
     // Playing -> Caught (freeze) -> Dying (animation) -> Respawn (pause) -> Playing
@@ -108,12 +115,21 @@ int main()
     while (window.isOpen())
     {
         float dt = clock.restart().asSeconds();
+        if (paused) dt = 0.f;
         gameMap.update(dt);   // runs the maze flash
 
         while (const std::optional event = window.pollEvent())
         {
             if (event->is<sf::Event::Closed>())
                 window.close();
+
+            if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                if (key->code == sf::Keyboard::Key::P && gameState == GameState::Playing) {
+                    paused = !paused;
+                    audio.setPaused(paused);
+                }
+                if (key->code == sf::Keyboard::Key::M) audio.toggleMute();
+            }
 
             if (const auto* resized = event->getIf<sf::Event::Resized>())
                 applyLetterbox(window, resized->size);
@@ -125,7 +141,8 @@ int main()
         EatResult eaten;
         if (gameState == GameState::Playing)
             eaten = eatSystem.update(dt, player.getPosition());
-        if (eaten.power > 0) enemies.frighten();            // power pellet: ghosts turn blue
+        if (eaten.power > 0) enemies.frighten();
+        if (eaten.food > 0)  audio.play(Sfx::Dot);            // power pellet: ghosts turn blue
 
         int dotsEaten = totalDots - (eatSystem.foodLeft() + eatSystem.powerLeft());
 
@@ -133,6 +150,7 @@ int main()
             PickupResult got = pickups.update(dt, player.getPosition(), dotsEaten);
             if (got.points > 0) {
                 eatSystem.addScore(got.points);
+                audio.play(Sfx::Fruit);
                 hud.addPopup(std::to_string(got.points), got.where, 2.0f);
             }
         }
@@ -140,10 +158,12 @@ int main()
         if (gameState == GameState::Playing) hit = enemies.update(dt, player.getPosition(),
                                          static_cast<int>(player.getDirection()), dotsEaten);
         eatSystem.addScore(hit.score);
+        if (hit.ghostsEaten > 0) audio.play(Sfx::EatGhost);
         if (hit.ghostsEaten > 0) hud.addPopup(std::to_string(hit.score), hit.eatenAt, 1.0f);
 
                 if (hit.playerHit && gameState == GameState::Playing) {
-            gameState = GameState::Caught;            // freeze everything for a moment
+            gameState = GameState::Caught;
+            audio.stopAll();            // freeze everything for a moment
             stateTimer = 0.f;
         }
 
@@ -163,7 +183,7 @@ int main()
         stateTimer += dt;
 
         // READY! (plus PLAYER ONE on a new game), then play starts
-        if (gameState == GameState::Ready && stateTimer >= (firstStart ? 3.3f : 1.5f)) {
+        if (gameState == GameState::Ready && stateTimer >= (firstStart ? std::max(3.3f, audio.length(Sfx::GameStart)) : 1.5f)) {
             gameState = GameState::Playing;
             firstStart = false;
         }
@@ -217,6 +237,7 @@ int main()
             gameState = GameState::Dying;             // ghosts vanish, Pac-Man dies
             stateTimer = 0.f;
             player.startDeath();
+            audio.play(Sfx::Death);
             pickups.clearFruit();
             // (no maze flash on death)   // flashes until the animation ends (stopped below)
         } else if (gameState == GameState::Dying && player.deathFinished()) {
@@ -231,6 +252,22 @@ int main()
             player.setDirection(Direction::Left);
         }
 
+        // Extra life at 10,000 points
+        int scoreNow = eatSystem.getScore();
+        if (scoreNow < 10000)        extraLifeGiven = false;       // resets on a new game
+        else if (!extraLifeGiven) {
+            extraLifeGiven = true;
+            ++lives;
+            audio.play(Sfx::ExtraLife);
+        }
+
+        // Siren / power-up / eyes loops (only while the game is running)
+        audio.update();
+        if (!paused)
+            audio.updateBackground(gameState == GameState::Playing,
+                                   enemies.anyEaten(), enemies.anyFrightened(),
+                                   eatSystem.foodLeft() + eatSystem.powerLeft(), totalDots);
+
         hud.setScore(eatSystem.getScore());
         hud.setLives(lives > 0 ? lives - 1 : 0);   // icons show the extra lives
         hud.showPlayerOne(gameState == GameState::Ready && firstStart && stateTimer < 1.8f);
@@ -243,6 +280,8 @@ int main()
             title.update(dt);
             if (title.startRequested()) {
                 // Fresh game
+                audio.stopAll();
+                audio.play(Sfx::GameStart);
                 eatSystem.reset();                    // dots back, score 0
                 lives = 3;
                 level = 1;
