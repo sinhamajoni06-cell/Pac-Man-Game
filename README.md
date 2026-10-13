@@ -13,9 +13,32 @@ The game with mixer of word finding genre!
 ```
 Pacman-project/
 ├── build.bat                      # build and launch script
-├── Pacman/                        # build output (Pacman.exe, DLLs, copied assets)
+├── Pacman/                        # build output (Word-Man exe, DLLs, copied assets)
 ├── main/
 │   └── assets/
+│       ├── audio/
+│       │   └── SFX/
+│       │       ├── game_start.mp3     # intro jingle
+│       │       ├── dot_1.mp3          # waka-waka (alternates with dot_2)
+│       │       ├── dot_2.mp3
+│       │       ├── siren_1.mp3        # background siren (faster as dots run out)
+│       │       ├── siren_2.mp3
+│       │       ├── siren_3.mp3
+│       │       ├── power_up.mp3       # loop while ghosts are blue
+│       │       ├── eyes.mp3           # loop while eaten ghosts run home
+│       │       ├── eat_ghost.mp3
+│       │       ├── fruit.mp3
+│       │       ├── death.mp3
+│       │       ├── extra_life.mp3
+│       │       ├── pause.mp3
+│       │       └── pause_beat.mp3
+│       ├── TxT/
+│       │   ├── PressStart2P-Regular.ttf   # arcade font (score, READY!, menu text)
+│       │   ├── highscore.txt              # created by the game (best score)
+│       │   └── name/
+│       │       ├── crackman.ttf           # logo fonts for the "WORD-MAN" title
+│       │       ├── crackman front.ttf
+│       │       └── crackman back.ttf
 │       └── graphic/
 │           └── game/
 │               ├── game.png
@@ -24,7 +47,9 @@ Pacman-project/
 │               │   ├── Pac-Man (Up).gif
 │               │   ├── Pac-Man (Down).gif
 │               │   ├── Pac-Man (Left).gif
-│               │   └── Pac-Man (Right).gif
+│               │   ├── Pac-Man (Right).gif
+│               │   ├── Pac-Man (Death Animation).gif   # plays once when caught
+│               │   └── Pac Man.png                     # life icon
 │               ├── Blinky/                # red ghost
 │               │   ├── Blinky (Up).gif
 │               │   ├── Blinky (Down).gif
@@ -47,18 +72,32 @@ Pacman-project/
 │               │   ├── Clyde (Left).gif
 │               │   └── Clyde (Right).gif
 │               ├── IZIKE/                 # not used yet
+│               ├── pickups/               # bonus fruit (SVG, drawn by nanosvg)
+│               │   ├── cherry.svg
+│               │   ├── strawberry.svg
+│               │   ├── orange.svg
+│               │   ├── apple.svg
+│               │   ├── melon.svg
+│               │   ├── galaxian.svg
+│               │   └── key.svg
 │               └── map/
-│                   ├── map_full_.png      # maze walls, no dots (used for drawing and the hitbox)
+│                   ├── map_full_.png      # maze walls, no dots (used for drawing, the hitbox and the white flash)
 │                   ├── food.png           # small dots
 │                   └── power_up.png       # 4 big power pellets
 └── core/
     ├── lib/
     │   ├── header/
-    │   │   ├── player.h           # Pac-Man movement, input, GIF animation
-    │   │   ├── map.h              # map drawing
+    │   │   ├── player.h           # Pac-Man movement, input, GIF animation, death animation
+    │   │   ├── map.h              # map drawing, level-clear flash
     │   │   ├── map_box.h          # wall hitbox, lane movement, tunnel teleport
     │   │   ├── eat_system.h       # eating dots, power-up blinking, score
+    │   │   ├── pickup_system.h    # bonus fruit and the level indicator
+    │   │   ├── hud.h              # 1UP, score, HIGH SCORE, READY!, GAME OVER, life icons
+    │   │   ├── title_screen.h     # home page: WORD-MAN logo, character list
+    │   │   ├── audio_system.h     # global sound system (Audio::get())
     │   │   ├── stb_image.h        # GIF decoder (third-party, single header)
+    │   │   ├── nanosvg.h          # SVG reader (third-party, single header)
+    │   │   ├── nanosvgrast.h      # SVG rasterizer (third-party, single header)
     │   │   └── enemy/
     │   │       ├── gif_animation.h    # GIF loader (+ blue/white scared frames)
     │   │       ├── ghost.h            # ghost base class: tile movement, house, modes
@@ -73,6 +112,10 @@ Pacman-project/
     │       ├── map.cpp
     │       ├── map_box.cpp
     │       ├── eat_system.cpp
+    │       ├── pickup_system.cpp
+    │       ├── hud.cpp
+    │       ├── title_screen.cpp
+    │       ├── audio_system.cpp
     │       └── enemy/
     │           ├── gif_animation.cpp
     │           ├── ghost.cpp
@@ -83,5 +126,5 @@ Pacman-project/
     │           └── enemy_manager.cpp
     └── src/
         └── engine/
-            └── PacmanMain.cpp     # main() and the game loop
+            └── PacmanMain.cpp     # main() and the game loop (title, ready, play, death, game over)
 ```
