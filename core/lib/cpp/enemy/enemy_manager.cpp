@@ -118,6 +118,7 @@ EnemyResult EnemyManager::update(float dt, sf::Vector2f playerWindowPos, int pla
         if (d.x * d.x + d.y * d.y > 36.f) continue;       // closer than 6 map pixels
 
         if (g->frightened()) {
+            result.eatenAt = g->position();
             g->getEaten();
             result.score += 200 << std::min(m_chain, 3);  // 200, 400, 800, 1600
             ++m_chain;
