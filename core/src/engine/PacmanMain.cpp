@@ -5,6 +5,8 @@
 #include "map_box.h"
 #include "eat_system.h"
 #include "enemy/enemy_manager.h"
+#include "hud.h"
+#include "pickup_system.h"
 
 // Keeps the 800x600 game world in the right proportions when the window is
 // resized or maximized (black bars appear if the window shape is different)
@@ -36,7 +38,7 @@ int main()
     Map gameMap;
     if (!gameMap.load("main/assets/graphic/game"))
         return 1;
-    gameMap.fitToWindow({800, 600});
+    gameMap.fitWithMargins({800, 600}, 24.f, 16.f);   // 3 HUD rows on top, 2 at the bottom
 
     EatSystem eatSystem;
     if (!eatSystem.load("main/assets/graphic/game"))
@@ -58,6 +60,18 @@ int main()
     enemies.setTransform(gameMap.getPosition(), gameMap.getScale());
     enemies.reset();        // Pac-Man's hitbox, in map pixels
 
+    PickupSystem pickups;
+    if (!pickups.load("main/assets/graphic/game/pickups"))
+        return 1;
+    pickups.setTransform(gameMap.getPosition(), gameMap.getScale());
+    int level = 1;
+
+    Hud hud;
+    if (!hud.load("main/assets/TxT/PressStart2P-Regular.ttf"))
+        return 1;
+    hud.setTransform(gameMap.getPosition(), gameMap.getScale());
+    hud.loadHighScore("main/assets/TxT/highscore.txt");
+
     Player player;
     // change this path to where your GIF folder really is
     if (!player.load("main/assets/graphic/game/Pac-man"))
@@ -65,6 +79,8 @@ int main()
     // Start spot: center of the map, in the row below the ghost house (map pixel 113, 188)
     player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
     player.setMapBox(&mapBox);
+    if (!hud.loadLifeIcon("main/assets/graphic/game/Pac-man/Pac Man.png"))
+        hud.setLifeTexture(player.lifeTexture());   // fallback if the image is missing
     mapBox.setWrapMargin(player.getHalfWidth() / gameMap.getScale());   // jump only when fully hidden
     player.setDirection(Direction::Left);   // already moving left at launch
     player.setScale(gameMap.getScale());   // sprite scaled together with the maze
@@ -73,14 +89,18 @@ int main()
     sf::Clock clock;
 
     // Playing -> Caught (freeze) -> Dying (animation) -> Respawn (pause) -> Playing
-    enum class GameState { Playing, Caught, Dying, Respawn };
-    GameState gameState = GameState::Playing;
+    enum class GameState { Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver };
+    GameState gameState = GameState::Ready;
     float stateTimer = 0.f;
+    int   lives = 3;
+    bool  firstStart = true;                       // "PLAYER ONE" only on a new game
+    GameState lastState = GameState::Playing;
+    bool  levelFlashStarted = false;
 
     while (window.isOpen())
     {
         float dt = clock.restart().asSeconds();
-        // (blinking now lives in EatSystem)
+        gameMap.update(dt);   // runs the maze flash
 
         while (const std::optional event = window.pollEvent())
         {
@@ -92,46 +112,129 @@ int main()
         }
 
         player.handleInput();
-        if (gameState != GameState::Caught) player.update(dt);
+        if (gameState == GameState::Playing || gameState == GameState::Dying) player.update(dt);
+        else if (gameState == GameState::Ready) player.update(0.f);   // stands still, but is drawn
         EatResult eaten;
         if (gameState == GameState::Playing)
             eaten = eatSystem.update(dt, player.getPosition());
         if (eaten.power > 0) enemies.frighten();            // power pellet: ghosts turn blue
 
         int dotsEaten = totalDots - (eatSystem.foodLeft() + eatSystem.powerLeft());
+
+        if (gameState == GameState::Playing) {
+            PickupResult got = pickups.update(dt, player.getPosition(), dotsEaten);
+            if (got.points > 0) {
+                eatSystem.addScore(got.points);
+                hud.addPopup(std::to_string(got.points), got.where, 2.0f);
+            }
+        }
         EnemyResult hit;
         if (gameState == GameState::Playing) hit = enemies.update(dt, player.getPosition(),
                                          static_cast<int>(player.getDirection()), dotsEaten);
         eatSystem.addScore(hit.score);
+        if (hit.ghostsEaten > 0) hud.addPopup(std::to_string(hit.score), hit.eatenAt, 1.0f);
 
                 if (hit.playerHit && gameState == GameState::Playing) {
             gameState = GameState::Caught;            // freeze everything for a moment
             stateTimer = 0.f;
         }
 
+        // All dots and power-ups eaten: freeze, flash the maze, then start over
+        if (gameState == GameState::Playing && eatSystem.allEaten()) {
+            gameState = GameState::LevelClear;
+            stateTimer = 0.f;
+            levelFlashStarted = false;
+        }
+
+        // Entering a new state
+        if (gameState != lastState) {
+            lastState = gameState;
+            if (gameState == GameState::Ready) stateTimer = 0.f;
+        }
+
         stateTimer += dt;
+
+        // READY! (plus PLAYER ONE on a new game), then play starts
+        if (gameState == GameState::Ready && stateTimer >= (firstStart ? 3.3f : 1.5f)) {
+            gameState = GameState::Playing;
+            firstStart = false;
+        }
+
+        // GAME OVER for 4 seconds, then a new game
+        if (gameState == GameState::GameOver && stateTimer >= 4.0f) {
+            hud.saveHighScore("main/assets/TxT/highscore.txt");
+            eatSystem.reset();                     // dots back, score 0
+            lives = 3;
+            enemies.reset();
+            player.revive();
+            player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
+            player.setDirection(Direction::Left);
+            firstStart = true;
+            stateTimer = 0.f;
+            gameState = GameState::Ready;
+        }
+
+        if (gameState == GameState::LevelClear) {
+            if (!levelFlashStarted && stateTimer >= 1.0f) {          // short freeze first
+                gameMap.startFlash(2.0f, 0.25f);                      // 4 white flashes
+                levelFlashStarted = true;
+            }
+            if (stateTimer >= 3.5f) {                                 // flash finished: restart
+                gameMap.stopFlash();
+
+                ++level;                                                      // next level, next fruit
+                pickups.setLevel(level);
+
+                int keepScore = eatSystem.getScore();
+                eatSystem.reset();                                    // every dot comes back
+                eatSystem.addScore(keepScore);                        // reset() would zero the score
+
+                enemies.reset();
+                player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
+                player.setDirection(Direction::Left);
+
+                gameState = GameState::Ready;
+                stateTimer = 0.f;
+            }
+        }
         if (gameState == GameState::Caught && stateTimer >= 1.0f) {
             gameState = GameState::Dying;             // ghosts vanish, Pac-Man dies
             stateTimer = 0.f;
             player.startDeath();
+            pickups.clearFruit();
+            // (no maze flash on death)   // flashes until the animation ends (stopped below)
         } else if (gameState == GameState::Dying && player.deathFinished()) {
-            gameState = GameState::Respawn;           // short pause on the empty maze
+            if (--lives <= 0) gameState = GameState::GameOver;     // out of lives
+            else              gameState = GameState::Respawn;           // short pause on the empty maze
             stateTimer = 0.f;
         } else if (gameState == GameState::Respawn && stateTimer >= 1.0f) {
-            gameState = GameState::Playing;
+            gameState = GameState::Ready;
             player.revive();
             enemies.reset();
             player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
             player.setDirection(Direction::Left);
         }
 
+        hud.setScore(eatSystem.getScore());
+        hud.setLives(lives > 0 ? lives - 1 : 0);   // icons show the extra lives
+        hud.showPlayerOne(gameState == GameState::Ready && firstStart && stateTimer < 1.8f);
+        hud.showReady(gameState == GameState::Ready);
+        hud.showGameOver(gameState == GameState::GameOver);
+        hud.update(dt);
+
         window.clear(sf::Color::Black);
         gameMap.draw(window);
         eatSystem.draw(window);
-        if (gameState == GameState::Playing || gameState == GameState::Caught)
+        pickups.draw(window);
+        bool showEnemies = gameState == GameState::Playing || gameState == GameState::Caught ||
+                           (gameState == GameState::Ready && !(firstStart && stateTimer < 1.8f));
+        if (showEnemies)
             enemies.draw(window);
-        player.draw(window);
+        if (!(gameState == GameState::Ready && firstStart && stateTimer < 1.8f))
+            player.draw(window);                   // hidden during the first part of the intro
+        hud.draw(window);
         window.display();
     }
+    hud.saveHighScore("main/assets/TxT/highscore.txt");
     return 0;
 }
