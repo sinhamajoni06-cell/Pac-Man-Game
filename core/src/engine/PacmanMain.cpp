@@ -7,6 +7,7 @@
 #include "enemy/enemy_manager.h"
 #include "hud.h"
 #include "pickup_system.h"
+#include "title_screen.h"
 
 // Keeps the 800x600 game world in the right proportions when the window is
 // resized or maximized (black bars appear if the window shape is different)
@@ -32,7 +33,7 @@ static void applyLetterbox(sf::RenderWindow& window, sf::Vector2u size)
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode({800, 600}), "Pacman");
+    sf::RenderWindow window(sf::VideoMode({800, 600}), "Word-Man");
     window.setFramerateLimit(60);
 
     Map gameMap;
@@ -72,6 +73,13 @@ int main()
     hud.setTransform(gameMap.getPosition(), gameMap.getScale());
     hud.loadHighScore("main/assets/TxT/highscore.txt");
 
+    TitleScreen title;
+    if (!title.load("main/assets"))
+        return 1;
+    title.setTransform(gameMap.getPosition(), gameMap.getScale());
+    title.setTitle("WORD-MAN");
+    title.reset();
+
     Player player;
     // change this path to where your GIF folder really is
     if (!player.load("main/assets/graphic/game/Pac-man"))
@@ -89,8 +97,8 @@ int main()
     sf::Clock clock;
 
     // Playing -> Caught (freeze) -> Dying (animation) -> Respawn (pause) -> Playing
-    enum class GameState { Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver };
-    GameState gameState = GameState::Ready;
+    enum class GameState { Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title };
+    GameState gameState = GameState::Title;
     float stateTimer = 0.f;
     int   lives = 3;
     bool  firstStart = true;                       // "PLAYER ONE" only on a new game
@@ -160,6 +168,14 @@ int main()
             firstStart = false;
         }
 
+        // After GAME OVER the game returns to the home page
+        if (gameState == GameState::GameOver && stateTimer >= 4.0f) {
+            hud.saveHighScore("main/assets/TxT/highscore.txt");
+            title.reset();
+            gameState = GameState::Title;
+            stateTimer = 0.f;
+        }
+
         // GAME OVER for 4 seconds, then a new game
         if (gameState == GameState::GameOver && stateTimer >= 4.0f) {
             hud.saveHighScore("main/assets/TxT/highscore.txt");
@@ -223,6 +239,30 @@ int main()
         hud.update(dt);
 
         window.clear(sf::Color::Black);
+        if (gameState == GameState::Title) {
+            title.update(dt);
+            if (title.startRequested()) {
+                // Fresh game
+                eatSystem.reset();                    // dots back, score 0
+                lives = 3;
+                level = 1;
+                pickups.setLevel(1);
+                enemies.reset();
+                player.revive();
+                player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
+                player.setDirection(Direction::Left);
+                firstStart = true;
+                stateTimer = 0.f;
+                gameState = GameState::Ready;
+            } else {
+                title.draw(window);
+                hud.setLives(0);                      // no life icons on the home page
+                hud.draw(window);
+                window.display();
+                continue;
+            }
+        }
+
         gameMap.draw(window);
         eatSystem.draw(window);
         pickups.draw(window);
