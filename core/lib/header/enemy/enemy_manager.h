@@ -36,6 +36,9 @@ public:
 
     void draw(sf::RenderTarget& target);
 
+    bool anyFrightened() const { return m_frightTimer > 0.f; }
+    bool anyEaten() const { return false; }   // TODO: wire to Ghost's "eyes" state
+
 private:
     static constexpr int   kPhaseCount = 7;
     static constexpr float kHitbox = 8.f;   // ghosts closer than this (map pixels) can't travel stacked
