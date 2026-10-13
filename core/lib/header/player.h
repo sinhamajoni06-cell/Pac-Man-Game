@@ -28,6 +28,11 @@ public:
     void revive();                                   // back to normal after the animation
     bool isDying() const       { return m_dying; }
     bool deathFinished() const { return m_dying && m_deathDone; }
+
+    // Pac-Man picture for the life icons (a frame of the left-facing animation)
+    const sf::Texture* lifeTexture() const {
+        return m_left.frames.empty() ? nullptr : &m_left.frames[m_left.frames.size() / 2];
+    }
     sf::Vector2f getPosition() const { return m_pos; }
 
     // Half the sprite width in window pixels (used to time the tunnel teleport)

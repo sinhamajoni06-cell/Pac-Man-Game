@@ -11,6 +11,7 @@ struct EnemyResult {
     bool playerHit    = false;   // a ghost caught Pac-Man
     int  ghostsEaten  = 0;       // ghosts Pac-Man ate this frame
     int  score        = 0;       // points for those ghosts (200, 400, 800, 1600)
+    sf::Vector2f eatenAt{0.f, 0.f};   // where the last ghost was eaten (map pixels)
 };
 
 // Owns the four ghosts: scatter/chase timing, scared mode, house release, collisions.

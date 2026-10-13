@@ -17,7 +17,15 @@ public:
 
     // withDots = true draws map_full_.png, false draws map.png
     void draw(sf::RenderTarget& target, bool withDots = true);
-    void update(float dt);   // call every frame: blinks the power-ups
+    void update(float dt);
+
+    // Fit the maze into the window and leave room above and below for the HUD
+    // (margins are in map pixels)
+    void fitWithMargins(sf::Vector2u windowSize, float topMargin, float bottomMargin);
+
+    // Flash the maze between the blue and the white image
+    void startFlash(float duration, float interval);   // interval = seconds per color
+    void stopFlash();                                   // back to blue right away   // call every frame: blinks the power-ups
 
     sf::Vector2f getPosition() const { return m_pos; }
     float        getScale()    const { return m_scale; }
@@ -33,6 +41,14 @@ private:
     sf::Texture m_powerTex;
     std::optional<sf::Sprite> m_food;
     std::optional<sf::Sprite> m_power;
+
+    sf::Texture m_whiteTex;            // map/map_full_(white).png
+    bool  m_flashing      = false;
+    bool  m_flashWhite    = false;
+    float m_flashElapsed  = 0.f;
+    float m_flashTimer    = 0.f;
+    float m_flashDuration = 0.f;
+    float m_flashInterval = 0.25f;
 
     float m_blinkTimer    = 0.f;
     bool  m_powerVisible  = true;
