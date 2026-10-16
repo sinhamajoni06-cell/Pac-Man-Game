@@ -96,6 +96,14 @@ if not exist "%OUT_DIR%" (
 
 echo.
 if exist "%OUTPUT%" del /q "%OUTPUT%"
+
+:: --- Embed logo.png as the exe icon ---
+set "ICO=main\assets\graphic\game\app.ico"
+if exist "%ICO%" (
+    call :MAKE_ICON
+) else (
+    echo [INFO] %ICO% not found - building without a custom icon.
+)
 echo [BUILDING] Compiling %APP_NAME%...
 echo Main File : %MAIN_FILE%
 echo ----------------------------------------------------
@@ -167,3 +175,17 @@ exit /b 1
 :ASK
 powershell -NoProfile -Command "Write-Host -NoNewline '%~1 ' -ForegroundColor Yellow; Write-Host -NoNewline '[Y/N]: ' -ForegroundColor White; [console]::CursorVisible=$true; while ($true) { $k = [console]::ReadKey($true); if ($k.Key -eq 'Y') { Write-Host 'Y'; [console]::CursorVisible=$false; exit 1 }; if ($k.Key -eq 'N') { Write-Host 'N'; [console]::CursorVisible=$false; exit 2 } }"
 exit /b %ERRORLEVEL%
+
+
+:: ------------------------------------------------------
+:: Subroutine: logo.png -> app.ico -> app_res.o (linked into the exe)
+:: ------------------------------------------------------
+:MAKE_ICON
+>"%OUT_DIR%\app.rc" echo 1 ICON "%ICO:\=/%"
+windres -O coff -i "%OUT_DIR%\app.rc" -o "%OUT_DIR%\app_res.o"
+if errorlevel 1 (
+    echo [WARNING] windres failed - building without a custom icon.
+    exit /b 0
+)
+set "SOURCES=%SOURCES%','%OUT_DIR%/app_res.o"
+exit /b 0

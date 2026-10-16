@@ -38,6 +38,10 @@ int main()
     sf::RenderWindow window(sf::VideoMode({800, 600}), "Word-Man");
     window.setFramerateLimit(60);
 
+    sf::Image icon;
+    if (icon.loadFromFile("main/assets/graphic/game/logo.png"))
+        window.setIcon(icon.getSize(), icon.getPixelsPtr());
+
     Map gameMap;
     if (!gameMap.load("main/assets/graphic/game"))
         return 1;

@@ -1,6 +1,16 @@
 # Pac-Man-Game
 The game with mixer of word finding genre!
 
+<div align="center">
+  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.1.0">
+    <img src="https://l-malakar.github.io/LLOF/asset/logo.svg" alt="Word-Man logo" width="110" height="110">
+  </a>
+  <br><br>
+  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.1.0/Word-Man.zip">
+    <img src="https://img.shields.io/badge/%E2%96%B6_Download-FFCC00?style=for-the-badge&labelColor=FFCC00&color=FFCC00" alt="Download Word-Man">
+  </a>
+</div>
+
 # Download
 
 <table>
