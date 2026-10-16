@@ -3,11 +3,11 @@ The game with mixer of word finding genre!
 
 <div align="center">
   <img src="https://github.com/sinhamajoni06-cell/Pac-Man-Game/blob/main/main/assets/graphic/game/name.png?raw=true" alt="WORD-MAN" width="420">
-  <br><br>
+  <br>
   <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.1.0">
-    <img src="https://github.com/sinhamajoni06-cell/Pac-Man-Game/blob/main/main/assets/graphic/game/logo.png?raw=true" alt="Word-Man logo" width="200">
+    <img src="https://github.com/sinhamajoni06-cell/Pac-Man-Game/blob/main/main/assets/graphic/game/logo.png?raw=true" alt="Word-Man logo" width="140">
   </a>
-  <br><br>
+  <br>
   <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.1.0/Word-Man.zip">
     <img src="https://img.shields.io/badge/%E2%96%B6%20%20DOWNLOAD%20FOR%20WINDOWS-FFCC00?style=for-the-badge" alt="Download Word-Man for Windows" width="300">
   </a>
