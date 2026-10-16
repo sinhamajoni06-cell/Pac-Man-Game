@@ -9,8 +9,16 @@ The game with mixer of word finding genre!
     <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/archive/refs/heads/main.zip">Download</a></td>
   </tr>
   </tr>
-  <td align="left"><b>Word-Man(v0.1.0)</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.1.0"><code>Word-Man.zip</code></a>)</td>
+    <td align="left"><b>Word-Man(v0.1.0)</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.1.0"><code>Word-Man.zip</code></a>)</td>
     <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.1.0/Word-Man.zip">Download</a></td>
+  </tr>
+  </tr>
+    <td align="left"><b>G++ Installation and Setup</b></td>
+    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Zero-Theory#g-installation-and-setup">Open link </a></td>
+  </tr>
+  </tr>
+    <td align="left"><b>Development Worning</b></td>
+    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Zero-Theory#development-worning-">Open link </a></td>
   </tr>
 <table>
 
