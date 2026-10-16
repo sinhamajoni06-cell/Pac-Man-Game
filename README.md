@@ -19,6 +19,9 @@ The game with mixer of word finding genre!
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-2979FF?style=flat-square" alt="Windows">
   <img src="https://img.shields.io/badge/made%20with-C%2B%2B%20%2B%20SFML-FFCC00?style=flat-square" alt="C++ and SFML">
+  <a href="https://github.com/L-Malakar">
+    <img src="https://img.shields.io/badge/Dev-LMalakar-00aa00?style=flat-square" alt="Dev L-Malakar">
+  </a>
 </div>
 
 # Download
