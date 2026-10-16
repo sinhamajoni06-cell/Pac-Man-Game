@@ -1,6 +1,15 @@
 # Pac-Man-Game
 The game with mixer of word finding genre!
 
+# Download
+
+<table>
+  <tr>
+    <td align="left"><b>Source Code</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game"><code>Word-Man.zip</code></a>)</td>
+    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/archive/refs/heads/main.zip">Download</a></td>
+  </tr>
+<table>
+
 ## Ghost AI
 | Ghost  | Chase behavior                                   | Scatter corner |
 |--------|--------------------------------------------------|----------------|
