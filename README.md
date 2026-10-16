@@ -3,7 +3,7 @@ The game with mixer of word finding genre!
 
 <div align="center">
   <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.1.0">
-    <img src="https://l-malakar.github.io/LLOF/asset/logo.svg" alt="Word-Man logo" width="110" height="110">
+    <img src="https://github.com/sinhamajoni06-cell/Pac-Man-Game/blob/main/main/assets/graphic/game/logo.png?raw=true" alt="Word-Man logo" width="220" height="220">
   </a>
   <br><br>
   <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.1.0/Word-Man.zip">
