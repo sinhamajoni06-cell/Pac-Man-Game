@@ -10,6 +10,10 @@
 #include "title_screen.h"
 #include "audio_system.h"
 #include <algorithm>
+#include <fstream>
+#include <string>
+#include "ui_panel.h"
+#include "menus.h"
 
 // Keeps the 800x600 game world in the right proportions when the window is
 // resized or maximized (black bars appear if the window shape is different)
@@ -104,11 +108,29 @@ int main()
     audio.load("main/assets/audio/SFX");     // missing files only print a warning
     bool paused = false;
     bool extraLifeGiven = false;
+    bool  passVisible = false;            // the LEVEL CLEAR screen is showing
+    bool  nextLevelRequested = false;     // NEXT LEVEL was chosen
+    float volumeToast = 0.f;              // time left for the little volume box
+
+    // Menu screens (buttons are clickable with the mouse)
+    if (!Panel::loadFont("main/assets/TxT/PressStart2P-Regular.ttf"))
+        return 1;
+    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel;
+    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel})
+        p->setTransform(gameMap.getPosition(), gameMap.getScale());
+    Menus::buildTitle(titlePanel);
+    Menus::buildHudButtons(hudPanel);
+
+    {   // volume from the last run
+        std::ifstream f("main/assets/TxT/volume.txt");
+        float v = 0.f;
+        if (f >> v) audio.setVolume(v);
+    }
 
     sf::Clock clock;
 
     // Playing -> Caught (freeze) -> Dying (animation) -> Respawn (pause) -> Playing
-    enum class GameState { Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title };
+    enum class GameState { Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title, DeathScreen };
     GameState gameState = GameState::Title;
     float stateTimer = 0.f;
     int   lives = 3;
@@ -116,10 +138,92 @@ int main()
     GameState lastState = GameState::Playing;
     bool  levelFlashStarted = false;
 
+    auto spawnPlayer = [&]() {
+        player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
+        player.setDirection(Direction::Left);
+    };
+
+    auto startNewGame = [&]() {
+        audio.stopAll();
+        audio.play(Sfx::GameStart);
+        eatSystem.reset();                    // dots back, score 0
+        lives = 3;
+        level = 1;
+        pickups.setLevel(1);
+        enemies.reset();
+        player.revive();
+        spawnPlayer();
+        extraLifeGiven = false;
+        paused = false;
+        passVisible = false;
+        nextLevelRequested = false;
+        gameMap.stopFlash();
+        firstStart = true;
+        stateTimer = 0.f;
+        gameState = GameState::Ready;
+    };
+
+    auto goToMenu = [&]() {
+        hud.saveHighScore("main/assets/TxT/highscore.txt");
+        audio.stopAll();
+        gameMap.stopFlash();
+        paused = false;
+        passVisible = false;
+        nextLevelRequested = false;
+        levelFlashStarted = false;
+        title.reset();
+        stateTimer = 0.f;
+        gameState = GameState::Title;
+    };
+
+    auto setPausedState = [&](bool value) {
+        if (paused == value) return;
+        paused = value;
+        audio.setPaused(paused);
+        if (paused) Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
+    };
+
+    auto changeVolume = [&](float delta) {
+        audio.changeVolume(delta);
+        volumeToast = 1.5f;
+        if (paused) Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
+    };
+
+    auto onButton = [&](int id) {
+        switch (id) {
+            case Menus::BtnPlay:
+            case Menus::BtnRetry:  startNewGame(); break;
+            case Menus::BtnNext:   nextLevelRequested = true; break;
+            case Menus::BtnMenu:   goToMenu(); break;
+            case Menus::BtnQuit:   window.close(); break;
+            case Menus::BtnPause:  if (gameState == GameState::Playing) setPausedState(true); break;
+            case Menus::BtnResume: setPausedState(false); break;
+            case Menus::BtnMute:
+                audio.toggleMute();
+                Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
+                break;
+            default: break;
+        }
+    };
+
+    // The screen that receives mouse clicks right now
+    auto activePanel = [&]() -> Panel* {
+        if (paused) return &pausePanel;
+        switch (gameState) {
+            case GameState::Title:       return &titlePanel;
+            case GameState::Playing:     return &hudPanel;
+            case GameState::DeathScreen: return &deathPanel;
+            case GameState::LevelClear:  return passVisible ? &passPanel : nullptr;
+            default:                     return nullptr;
+        }
+    };
+
     while (window.isOpen())
     {
         float dt = clock.restart().asSeconds();
+        float realDt = dt;                      // keeps running while the game is paused
         if (paused) dt = 0.f;
+        if (volumeToast > 0.f) volumeToast -= realDt;
         gameMap.update(dt);   // runs the maze flash
 
         while (const std::optional event = window.pollEvent())
@@ -131,8 +235,48 @@ int main()
                 if (key->code == sf::Keyboard::Key::P && gameState == GameState::Playing) {
                     paused = !paused;
                     audio.setPaused(paused);
+                    if (paused) Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
                 }
                 if (key->code == sf::Keyboard::Key::M) audio.toggleMute();
+                if (key->code == sf::Keyboard::Key::M) {
+                    volumeToast = 1.5f;
+                    if (paused) Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
+                }
+                if (key->code == sf::Keyboard::Key::Hyphen || key->code == sf::Keyboard::Key::Subtract) changeVolume(-5.f);
+                if (key->code == sf::Keyboard::Key::Equal  || key->code == sf::Keyboard::Key::Add)      changeVolume(5.f);
+                if (key->code == sf::Keyboard::Key::Escape) {
+                    if (paused) setPausedState(false);
+                    else if (gameState == GameState::Playing) setPausedState(true);
+                }
+                if (key->code == sf::Keyboard::Key::Enter) {     // Enter = the main button
+                    if (paused) setPausedState(false);
+                    else if (gameState == GameState::DeathScreen) startNewGame();
+                    else if (gameState == GameState::LevelClear && passVisible) nextLevelRequested = true;
+                }
+            }
+
+            if (const auto* wheel = event->getIf<sf::Event::MouseWheelScrolled>())
+                changeVolume(wheel->delta > 0.f ? 5.f : -5.f);
+
+            Panel* panel = activePanel();
+            if (const auto* moved = event->getIf<sf::Event::MouseMoved>()) {
+                if (panel) {
+                    panel->mouseMoved(window.mapPixelToCoords(moved->position));
+                    if (paused && panel->sliderDragging())
+                        audio.setVolume(panel->sliderValue() * 100.f);
+                }
+            }
+            if (const auto* press = event->getIf<sf::Event::MouseButtonPressed>()) {
+                if (panel && press->button == sf::Mouse::Button::Left) {
+                    int id = panel->mousePressed(window.mapPixelToCoords(press->position));
+                    if (paused && panel->sliderDragging())
+                        audio.setVolume(panel->sliderValue() * 100.f);
+                    if (id > 0) onButton(id);
+                }
+            }
+            if (event->is<sf::Event::MouseButtonReleased>()) {
+                titlePanel.mouseReleased(); hudPanel.mouseReleased(); pausePanel.mouseReleased();
+                deathPanel.mouseReleased(); passPanel.mouseReleased();
             }
 
             if (const auto* resized = event->getIf<sf::Event::Resized>())
@@ -192,6 +336,15 @@ int main()
             firstStart = false;
         }
 
+        // After "GAME OVER" has shown on the maze for 3 seconds: the death screen
+        if (gameState == GameState::GameOver && stateTimer >= 3.0f) {
+            hud.setScore(eatSystem.getScore());          // makes sure a new high score counts
+            hud.saveHighScore("main/assets/TxT/highscore.txt");
+            Menus::buildDeath(deathPanel, eatSystem.getScore(), hud.highScore(), level);
+            gameState = GameState::DeathScreen;
+            stateTimer = 0.f;
+        }
+
         // After GAME OVER the game returns to the home page
         if (gameState == GameState::GameOver && stateTimer >= 4.0f) {
             hud.saveHighScore("main/assets/TxT/highscore.txt");
@@ -219,9 +372,16 @@ int main()
                 gameMap.startFlash(2.0f, 0.25f);                      // 4 white flashes
                 levelFlashStarted = true;
             }
-            if (stateTimer >= 3.5f) {                                 // flash finished: restart
+            if (stateTimer >= 3.5f && !passVisible && !nextLevelRequested) {   // flash done: show the pass screen
+                gameMap.stopFlash();
+                passVisible = true;
+                Menus::buildPass(passPanel, level, eatSystem.getScore());
+            }
+            if (nextLevelRequested) {                                 // flash finished: restart
                 gameMap.stopFlash();
 
+                passVisible = false;
+                nextLevelRequested = false;
                 ++level;                                                      // next level, next fruit
                 pickups.setLevel(level);
 
@@ -299,6 +459,9 @@ int main()
                 gameState = GameState::Ready;
             } else {
                 title.draw(window);
+                titlePanel.draw(window);
+                if (volumeToast > 0.f)
+                    hudPanel.drawVolumeToast(window, audio.volume() / 100.f, audio.muted());
                 hud.setLives(0);                      // no life icons on the home page
                 hud.draw(window);
                 window.display();
@@ -315,9 +478,20 @@ int main()
             enemies.draw(window);
         if (!(gameState == GameState::Ready && firstStart && stateTimer < 1.8f))
             player.draw(window);                   // hidden during the first part of the intro
+
+        if (paused)                                                pausePanel.draw(window);
+        else if (gameState == GameState::Playing)                  hudPanel.draw(window);
+        else if (gameState == GameState::DeathScreen)              deathPanel.draw(window);
+        else if (gameState == GameState::LevelClear && passVisible) passPanel.draw(window);
+        if (volumeToast > 0.f && !paused)
+            hudPanel.drawVolumeToast(window, audio.volume() / 100.f, audio.muted());
         hud.draw(window);
         window.display();
     }
     hud.saveHighScore("main/assets/TxT/highscore.txt");
+    {
+        std::ofstream f("main/assets/TxT/volume.txt");
+        if (f) f << audio.volume() << "\n";
+    }
     return 0;
 }
