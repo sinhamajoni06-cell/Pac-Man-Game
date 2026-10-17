@@ -9,6 +9,7 @@
 #include "pickup_system.h"
 #include "title_screen.h"
 #include "audio_system.h"
+#include "loading_animation.h"
 #include <algorithm>
 #include <fstream>
 #include <string>
@@ -88,6 +89,14 @@ int main()
         return 1;
     title.setTransform(gameMap.getPosition(), gameMap.getScale());
     title.setTitle("WORD-MAN");
+
+    LoadingAnimation loading;
+    if (!loading.load("main/assets/graphic/game"))
+        return 1;
+    loading.setTransform(gameMap.getPosition(), gameMap.getScale());
+    loading.start();
+    bool  skipLoading = false;
+    float startLock = 0.f;      // blocks the start button for a moment after the intro is skipped
     title.reset();
 
     Player player;
@@ -130,8 +139,8 @@ int main()
     sf::Clock clock;
 
     // Playing -> Caught (freeze) -> Dying (animation) -> Respawn (pause) -> Playing
-    enum class GameState { Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title, DeathScreen };
-    GameState gameState = GameState::Title;
+    enum class GameState { Loading, Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title, DeathScreen };
+    GameState gameState = GameState::Loading;
     float stateTimer = 0.f;
     int   lives = 3;
     bool  firstStart = true;                       // "PLAYER ONE" only on a new game
@@ -224,10 +233,20 @@ int main()
         float realDt = dt;                      // keeps running while the game is paused
         if (paused) dt = 0.f;
         if (volumeToast > 0.f) volumeToast -= realDt;
+        if (startLock > 0.f) startLock -= dt;
         gameMap.update(dt);   // runs the maze flash
 
         while (const std::optional event = window.pollEvent())
         {
+            if (gameState == GameState::Loading) {
+                const auto* skipKey = event->getIf<sf::Event::KeyPressed>();
+                if ((skipKey && (skipKey->code == sf::Keyboard::Key::Enter ||
+                                 skipKey->code == sf::Keyboard::Key::Space ||
+                                 skipKey->code == sf::Keyboard::Key::Escape)) ||
+                    event->is<sf::Event::MouseButtonPressed>())
+                    skipLoading = true;
+            }
+
             if (event->is<sf::Event::Closed>())
                 window.close();
 
@@ -440,9 +459,24 @@ int main()
         hud.update(dt);
 
         window.clear(sf::Color::Black);
+
+        if (gameState == GameState::Loading) {
+            loading.update(dt);
+            if (loading.finished() || skipLoading) {
+                skipLoading = false;
+                startLock = 0.5f;                 // Enter must not also start the game
+                title.reset();
+                stateTimer = 0.f;
+                gameState = GameState::Title;     // continues to the home page below
+            } else {
+                loading.draw(window);
+                window.display();
+                continue;
+            }
+        }
         if (gameState == GameState::Title) {
             title.update(dt);
-            if (title.startRequested()) {
+            if (title.startRequested() && startLock <= 0.f) {
                 // Fresh game
                 audio.stopAll();
                 audio.play(Sfx::GameStart);
