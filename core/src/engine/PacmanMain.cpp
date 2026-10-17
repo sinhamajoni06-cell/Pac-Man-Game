@@ -47,6 +47,18 @@ int main()
     if (icon.loadFromFile("main/assets/graphic/game/logo.png"))
         window.setIcon(icon.getSize(), icon.getPixelsPtr());
 
+    bool fullscreen = false;
+    auto setFullscreen = [&](bool value) {
+        fullscreen = value;
+        if (fullscreen)
+            window.create(sf::VideoMode::getDesktopMode(), "Word-Man", sf::State::Fullscreen);
+        else
+            window.create(sf::VideoMode({800, 600}), "Word-Man", sf::Style::Default, sf::State::Windowed);
+        window.setFramerateLimit(60);
+        if (icon.getSize().x > 0) window.setIcon(icon.getSize(), icon.getPixelsPtr());
+        applyLetterbox(window, window.getSize());      // keep the 4:3 game area centered
+    };
+
     Map gameMap;
     if (!gameMap.load("main/assets/graphic/game"))
         return 1;
@@ -251,6 +263,9 @@ int main()
                 window.close();
 
             if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                if (key->code == sf::Keyboard::Key::F11 ||
+                    (key->code == sf::Keyboard::Key::Enter && key->alt))
+                    setFullscreen(!fullscreen);
                 if (key->code == sf::Keyboard::Key::P && gameState == GameState::Playing) {
                     paused = !paused;
                     audio.setPaused(paused);
@@ -267,7 +282,7 @@ int main()
                     if (paused) setPausedState(false);
                     else if (gameState == GameState::Playing) setPausedState(true);
                 }
-                if (key->code == sf::Keyboard::Key::Enter) {     // Enter = the main button
+                if (key->code == sf::Keyboard::Key::Enter && !key->alt) {     // Enter = the main button
                     if (paused) setPausedState(false);
                     else if (gameState == GameState::DeathScreen) startNewGame();
                     else if (gameState == GameState::LevelClear && passVisible) nextLevelRequested = true;
@@ -464,7 +479,8 @@ int main()
             loading.update(dt);
             if (loading.finished() || skipLoading) {
                 skipLoading = false;
-                startLock = 0.5f;                 // Enter must not also start the game
+                startLock = 0.5f;
+                if (!fullscreen) setFullscreen(true);   // go fullscreen when the intro ends                 // Enter must not also start the game
                 title.reset();
                 stateTimer = 0.f;
                 gameState = GameState::Title;     // continues to the home page below
@@ -476,7 +492,9 @@ int main()
         }
         if (gameState == GameState::Title) {
             title.update(dt);
-            if (title.startRequested() && startLock <= 0.f) {
+            if (title.startRequested() && startLock <= 0.f &&
+                !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt) &&
+                !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RAlt)) {
                 // Fresh game
                 audio.stopAll();
                 audio.play(Sfx::GameStart);
