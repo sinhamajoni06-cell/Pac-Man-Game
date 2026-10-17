@@ -36,6 +36,11 @@ set "SOURCES=core/lib/cpp/*.cpp','core/lib/cpp/enemy/*.cpp"
 :: D) Libraries (-L / -l)
 set "LIBS=-L %MSYS2_ROOT%/ucrt64/lib -lsfml-graphics -lsfml-window -lsfml-audio -lsfml-system -lopengl32 -lwinmm -lgdi32 -lfreetype"
 
+:: Hide the console window (the game is built as a Windows GUI program).
+:: Set SHOW_CONSOLE=1 to see the game's error messages while debugging.
+set "SHOW_CONSOLE=0"
+if "%SHOW_CONSOLE%"=="0" set "LIBS=%LIBS% -mwindows"
+
 set "OUTPUT=%OUT_DIR%\%APP_NAME%.exe"
 set "MAIN_WIN=%MAIN_FILE:/=\%"
 
@@ -142,6 +147,9 @@ xcopy /y /d "%BIN%\libvorbis*.dll"         "%OUT_DIR%\" >nul 2>nul
 xcopy /y /d "%BIN%\libogg*.dll"            "%OUT_DIR%\" >nul 2>nul
 
 :: ======================================================
+:: Refresh the Windows icon cache so the new exe icon shows up right away
+ie4uinit.exe -show >nul 2>nul
+
 :: 6. LAUNCH
 :: ======================================================
 
@@ -151,13 +159,8 @@ if errorlevel 2 exit /b 0
 
 echo -----------------------------------------
 echo Running %APP_NAME%...
-cd /d "%OUT_DIR%"
-"%APP_NAME%.exe"
-set "GAME_EXIT=%ERRORLEVEL%"
-cd /d "%~dp0"
-echo.
-echo %APP_NAME% exited with code %GAME_EXIT%
-pause
+:: "start" runs the game on its own, so closing this window does not close the game
+start "" /D "%OUT_DIR%" "%APP_NAME%.exe"
 exit /b 0
 
 :BUILD_FAILED
