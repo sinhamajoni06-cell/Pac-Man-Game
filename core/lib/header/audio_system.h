@@ -30,6 +30,9 @@ public:
     void stopAll();
     void setPaused(bool paused);
     void toggleMute();
+    bool  muted()  const { return m_muted; }
+    float volume() const { return m_volume; }               // 0..100
+    void  changeVolume(float delta) { setVolume(m_volume + delta); }
     void setVolume(float percent);           // 0..100
 
 private:
