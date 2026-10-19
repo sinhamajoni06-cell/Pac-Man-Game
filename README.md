@@ -34,7 +34,7 @@ The game with mixer of word finding genre!
   </tr>
 </table>
 
-# Download
+# Download (`Windows`)
 
 <table>
   <tr>
