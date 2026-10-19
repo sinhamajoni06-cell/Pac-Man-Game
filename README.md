@@ -24,10 +24,10 @@ The game with mixer of word finding genre!
   </a>
   <br><br>
   <img src="https://yt3.ggpht.com/BLmMBYURFwjGhRRAIw5KT_aVGrt1YZEwQI-TMpdGmMbiuOucv5SCumKGoY1mko14K_aAV9LzdyE9GA=s240-c-fcrop64=1,20000000dfffffff-nd-v1-rwa" alt="Word-Man logo" width="255">
-<table>
 </div>
   
 ---
+<table>
   <tr>
     <td><img src="https://yt3.ggpht.com/elyjG7UpLsRxA5GgqiF8P4ytdXqlqWW1G2a6p-oq9edKyjKZoZkMRD0X-2tPxPafGPLlJWigpY3PfYc=s640-c-fcrop64=1,38130000c7ecffff-rw-nd-v1" alt="Word-Man logo 2" width="100%"></td>
     <td><img src="https://yt3.ggpht.com/ax9sEo_AWQJbs5oThPINdXzaEwX5y5hzCxGS_8TEh_ixWsa77pCGm6b8YnrI_N0TPcZFrmGUCn-k=s640-c-fcrop64=1,38130000c7ecffff-rw-nd-v1" alt="Word-Man logo 1" width="100%"></td>
