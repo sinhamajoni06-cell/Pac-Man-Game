@@ -1,6 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <vector>
 
 #include "enemy/gif_animation.h"
 
@@ -17,18 +18,32 @@ public:
     bool load(const std::string& gameDir);
     void setTransform(sf::Vector2f origin, float scale) { m_origin = origin; m_scale = scale; }
 
-    void start() { m_time = 0.f; }
+    void start();                 // restarts the animation and builds a new fake loading curve
     void update(float dt) { m_time += dt; }
     void draw(sf::RenderTarget& target);
 
     bool finished() const;
+    void setShowLoadingUi(bool show) { m_showUi = show; }   // false = plain cutscene
 
 private:
     GifAnimation m_pacLeft, m_pacRight, m_blinkyLeft, m_blinkyRight;
 
+    // LOADING text, bar and percentage
+    sf::Font m_font;
+    bool  m_fontLoaded = false;
+    float m_fontTop = 0.f, m_fontH = 8.f;
+
+    struct Step { float t0, burstStart, t1, p0, p1; };   // wait from t0 to burstStart, then jump to p1
+    std::vector<Step> m_steps;
+    void  buildProgress();
+    float progress() const;                               // 0..100, uneven on purpose
+    void  drawLoadingUi(sf::RenderTarget& target);
+    static float totalTime();
+
     sf::Vector2f m_origin{0.f, 0.f};
     float m_scale = 1.f;
     float m_time = 0.f;
+    bool  m_showUi = true;
 
     // Timing and movement, in map pixels (the maze is 224 wide) and seconds
     static constexpr float kSpeed    = 75.f;   // everyone runs at this speed
