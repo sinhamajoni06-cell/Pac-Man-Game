@@ -46,6 +46,9 @@ public:
     void release();                     // leave the ghost house
     void frighten();                    // turn blue, reverse
     void setFlash(bool flash) { m_flash = flash; }
+    void setSpeeds(float normal, float tunnel, float fright) { m_vNormal = normal; m_vTunnel = tunnel; m_vFright = fright; }
+    void setElroy(float speed) { m_elroySpeed = speed; }      // Blinky only: 0 = off
+    void setHidden(bool hidden) { m_hidden = hidden; }
     void calm()               { m_frightened = false; m_flash = false; }
     void getEaten();                    // Pac-Man ate this ghost
     void reverse();                     // forced turn-around (mode change)
@@ -120,4 +123,7 @@ private:
     size_t m_pathIdx = 0;
     float  m_bobDir = -1.f;
     float  m_speedLimit = 0.f;   // 0 = no limit (set by EnemyManager)
+    float  m_vNormal = kSpeedNormal, m_vTunnel = kSpeedTunnel, m_vFright = kSpeedFright;
+    float  m_elroySpeed = 0.f;
+    bool   m_hidden = false;
 };
