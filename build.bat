@@ -15,8 +15,8 @@ powershell -NoProfile -Command "[console]::CursorVisible=$false"
 :: 1. SETTINGS & PATHS  (edit this section only)
 :: ======================================================
 
-set "APP_NAME=Pacman"
-set "OUT_DIR=Pacman"
+set "APP_NAME=Wordman"
+set "OUT_DIR=Wordman"
 set "MSYS2_ROOT=C:\msys64"
 
 set "COMPILER=g++.exe"
