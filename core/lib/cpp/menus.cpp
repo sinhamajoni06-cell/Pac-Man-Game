@@ -1,6 +1,7 @@
 #include "menus.h"
 
 #include <string>
+#include "version.h"
 
 namespace {
 const sf::Color kYellow(255, 255, 0);
@@ -13,8 +14,9 @@ const sf::Vector2f kBtn(104.f, 16.f);
 
 void Menus::buildTitle(Panel& p) {
     p.clear();
-    p.addButton(BtnPlay, "PLAY", {64.f, 256.f}, {64.f, 14.f});
-    p.addButton(BtnQuit, "QUIT", {160.f, 256.f}, {64.f, 14.f});
+    p.addButton(BtnPlay, "PLAY", {40.f, 256.f}, {56.f, 14.f});
+    p.addButton(BtnInfo, "INFO", {112.f, 256.f}, {56.f, 14.f});
+    p.addButton(BtnQuit, "QUIT", {184.f, 256.f}, {56.f, 14.f});
 }
 
 void Menus::buildHudButtons(Panel& p) {
@@ -58,4 +60,23 @@ void Menus::buildPass(Panel& p, int level, int score) {
     p.addText(std::to_string(score), {112.f, 128.f}, kWhite);
     p.addButton(BtnNext, "NEXT LEVEL", {112.f, 172.f}, kBtn);
     p.addButton(BtnMenu, "MENU",       {112.f, 196.f}, kBtn);
+}
+
+void Menus::buildInfo(Panel& p) {
+    p.clear();
+    p.setDim(235);
+    p.addText("HOW TO PLAY",                {112.f, 24.f},  kYellow);
+    p.addText("MOVE: ARROWS / WASD",        {112.f, 46.f},  kWhite);
+    p.addText("PAUSE: P OR ESC",            {112.f, 60.f},  kWhite);
+    p.addText("MUTE: M",                    {112.f, 74.f},  kWhite);
+    p.addText("VOLUME: - / = / WHEEL",      {112.f, 88.f},  kWhite);
+    p.addText("FULLSCREEN: F11",            {112.f, 102.f}, kWhite);
+    p.addText("EAT ALL THE DOTS",           {112.f, 126.f}, kCyan);
+    p.addText("POWER PELLETS LET YOU",      {112.f, 140.f}, kCyan);
+    p.addText("EAT THE GHOSTS",             {112.f, 152.f}, kCyan);
+    p.addText(std::string("WORD-MAN  V") + WORDMAN_VERSION, {112.f, 178.f}, kYellow);
+    p.addText("FONT: PRESS START 2P",       {112.f, 194.f}, kWhite, 6.f);
+    p.addText("FAN-MADE PROJECT",           {112.f, 206.f}, kWhite, 6.f);
+    p.addText("NOT AFFILIATED WITH BANDAI NAMCO", {112.f, 216.f}, kWhite, 6.f);
+    p.addButton(BtnBack, "BACK", {112.f, 240.f}, {64.f, 14.f});
 }
