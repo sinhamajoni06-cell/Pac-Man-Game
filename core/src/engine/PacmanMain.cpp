@@ -9,12 +9,24 @@
 #include "pickup_system.h"
 #include "title_screen.h"
 #include "audio_system.h"
+#include "level_config.h"
 #include "loading_animation.h"
 #include <algorithm>
 #include <fstream>
 #include <string>
 #include "ui_panel.h"
 #include "menus.h"
+#include <iostream>
+#include <sstream>
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
 
 // Keeps the 800x600 game world in the right proportions when the window is
 // resized or maximized (black bars appear if the window shape is different)
@@ -38,7 +50,49 @@ static void applyLetterbox(sf::RenderWindow& window, sf::Vector2u size)
     window.setView(view);
 }
 
+static void showFatalError(const std::string& text)
+{
+#ifdef _WIN32
+    MessageBoxA(nullptr, text.c_str(), "Word-Man", MB_OK | MB_ICONERROR);
+#else
+    std::cerr << text << std::endl;
+#endif
+}
+
+static int gameMain();
+
 int main()
+{
+    // Everything the game prints to std::cerr goes into error.log (the console is hidden)
+    std::ofstream errorLog("error.log");
+    std::streambuf* oldBuf = std::cerr.rdbuf(errorLog.rdbuf());
+
+    int rc = 1;
+    try {
+        rc = gameMain();
+    } catch (const std::exception& e) {
+        std::cerr << "[Fatal] " << e.what() << "\n";
+    } catch (...) {
+        std::cerr << "[Fatal] Unknown error\n";
+    }
+
+    std::cerr.flush();
+    std::cerr.rdbuf(oldBuf);
+    errorLog.close();
+
+    if (rc != 0) {
+        std::ifstream in("error.log");
+        std::stringstream ss;
+        ss << in.rdbuf();
+        std::string msg = ss.str();
+        if (msg.size() > 1200) msg.resize(1200);
+        if (msg.empty()) msg = "The game could not start.";
+        showFatalError("The game stopped because of an error:\n\n" + msg);
+    }
+    return rc;
+}
+
+static int gameMain()
 {
     sf::RenderWindow window(sf::VideoMode({800, 600}), "Word-Man");
     window.setFramerateLimit(60);
@@ -48,6 +102,12 @@ int main()
         window.setIcon(icon.getSize(), icon.getPixelsPtr());
 
     bool fullscreen = false;
+    bool autoFullscreen = true;       // saved: stays windowed if you chose that last time
+    {
+        std::ifstream f("main/assets/TxT/settings.txt");
+        int v = 1;
+        if (f >> v) autoFullscreen = (v != 0);
+    }
     auto setFullscreen = [&](bool value) {
         fullscreen = value;
         if (fullscreen)
@@ -131,16 +191,18 @@ int main()
     bool extraLifeGiven = false;
     bool  passVisible = false;            // the LEVEL CLEAR screen is showing
     bool  nextLevelRequested = false;     // NEXT LEVEL was chosen
-    float volumeToast = 0.f;              // time left for the little volume box
+    float volumeToast = 0.f;
+    bool  showInfo = false;           // the INFO screen is showing              // time left for the little volume box
 
     // Menu screens (buttons are clickable with the mouse)
     if (!Panel::loadFont("main/assets/TxT/PressStart2P-Regular.ttf"))
         return 1;
-    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel;
-    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel})
+    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel;
+    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel})
         p->setTransform(gameMap.getPosition(), gameMap.getScale());
     Menus::buildTitle(titlePanel);
     Menus::buildHudButtons(hudPanel);
+    Menus::buildInfo(infoPanel);
 
     {   // volume from the last run
         std::ifstream f("main/assets/TxT/volume.txt");
@@ -148,10 +210,14 @@ int main()
         if (f >> v) audio.setVolume(v);
     }
 
+    float ghostFreeze = 0.f;          // game freezes for a moment when a ghost is eaten
+    float eatPause = 0.f;             // tiny pause after every dot
+    bool  cutscenePending = false;    // play the intermission cutscene before the next level
+
     sf::Clock clock;
 
     // Playing -> Caught (freeze) -> Dying (animation) -> Respawn (pause) -> Playing
-    enum class GameState { Loading, Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title, DeathScreen };
+    enum class GameState { Loading, Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title, DeathScreen, Cutscene };
     GameState gameState = GameState::Loading;
     float stateTimer = 0.f;
     int   lives = 3;
@@ -217,6 +283,8 @@ int main()
             case Menus::BtnNext:   nextLevelRequested = true; break;
             case Menus::BtnMenu:   goToMenu(); break;
             case Menus::BtnQuit:   window.close(); break;
+            case Menus::BtnInfo:   showInfo = true;  break;
+            case Menus::BtnBack:   showInfo = false; break;
             case Menus::BtnPause:  if (gameState == GameState::Playing) setPausedState(true); break;
             case Menus::BtnResume: setPausedState(false); break;
             case Menus::BtnMute:
@@ -231,7 +299,7 @@ int main()
     auto activePanel = [&]() -> Panel* {
         if (paused) return &pausePanel;
         switch (gameState) {
-            case GameState::Title:       return &titlePanel;
+            case GameState::Title:       return showInfo ? &infoPanel : &titlePanel;
             case GameState::Playing:     return &hudPanel;
             case GameState::DeathScreen: return &deathPanel;
             case GameState::LevelClear:  return passVisible ? &passPanel : nullptr;
@@ -241,7 +309,7 @@ int main()
 
     while (window.isOpen())
     {
-        float dt = clock.restart().asSeconds();
+        float dt = std::min(clock.restart().asSeconds(), 0.05f);
         float realDt = dt;                      // keeps running while the game is paused
         if (paused) dt = 0.f;
         if (volumeToast > 0.f) volumeToast -= realDt;
@@ -259,13 +327,22 @@ int main()
                     skipLoading = true;
             }
 
+            if (gameState == GameState::Cutscene) {
+                const auto* cutKey = event->getIf<sf::Event::KeyPressed>();
+                if ((cutKey && (cutKey->code == sf::Keyboard::Key::Enter ||
+                                cutKey->code == sf::Keyboard::Key::Space ||
+                                cutKey->code == sf::Keyboard::Key::Escape)) ||
+                    event->is<sf::Event::MouseButtonPressed>())
+                    skipLoading = true;
+            }
+
             if (event->is<sf::Event::Closed>())
                 window.close();
 
             if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
                 if (key->code == sf::Keyboard::Key::F11 ||
                     (key->code == sf::Keyboard::Key::Enter && key->alt))
-                    setFullscreen(!fullscreen);
+                    { setFullscreen(!fullscreen); autoFullscreen = fullscreen; }
                 if (key->code == sf::Keyboard::Key::P && gameState == GameState::Playing) {
                     paused = !paused;
                     audio.setPaused(paused);
@@ -278,6 +355,7 @@ int main()
                 }
                 if (key->code == sf::Keyboard::Key::Hyphen || key->code == sf::Keyboard::Key::Subtract) changeVolume(-5.f);
                 if (key->code == sf::Keyboard::Key::Equal  || key->code == sf::Keyboard::Key::Add)      changeVolume(5.f);
+                if (key->code == sf::Keyboard::Key::Escape && showInfo) showInfo = false;
                 if (key->code == sf::Keyboard::Key::Escape) {
                     if (paused) setPausedState(false);
                     else if (gameState == GameState::Playing) setPausedState(true);
@@ -318,18 +396,36 @@ int main()
         }
 
         player.handleInput();
-        if (gameState == GameState::Playing || gameState == GameState::Dying) player.update(dt);
+
+        // Level difficulty (speeds, scared time, Blinky's speed-up)
+        const LevelConfig cfg = levelConfig(level);
+        const float topSpeed = 75.f;                          // map pixels per second at 100%
+        enemies.setDifficulty(level, cfg, topSpeed, eatSystem.foodLeft() + eatSystem.powerLeft());
+        player.setSpeed((enemies.anyFrightened() ? cfg.pacFrightSpeed : cfg.pacSpeed)
+                        * topSpeed * gameMap.getScale());
+
+        // Ghost-eaten freeze and the tiny pause after every dot
+        if (ghostFreeze > 0.f) {
+            ghostFreeze -= dt;
+            if (ghostFreeze <= 0.f) enemies.hideEaten(false);
+        }
+        const float gdt = ghostFreeze > 0.f ? 0.f : dt;       // game time (0 while frozen)
+        const float pdt = eatPause > 0.f ? 0.f : gdt;         // Pac-Man's own time
+        if (eatPause > 0.f) eatPause -= gdt;
+        if (gameState == GameState::Playing) player.update(pdt);
+        else if (gameState == GameState::Dying) player.update(dt);
         else if (gameState == GameState::Ready) player.update(0.f);   // stands still, but is drawn
         EatResult eaten;
         if (gameState == GameState::Playing)
-            eaten = eatSystem.update(dt, player.getPosition());
-        if (eaten.power > 0) enemies.frighten();
+            eaten = eatSystem.update(gdt, player.getPosition());
+        if (eaten.power > 0) enemies.frighten(cfg.frightTime, cfg.flashes);
+        eatPause += static_cast<float>(eaten.food + 3 * eaten.power) / 60.f;   // arcade: 1 frame per dot, 3 per pellet
         if (eaten.food > 0)  audio.play(Sfx::Dot);            // power pellet: ghosts turn blue
 
         int dotsEaten = totalDots - (eatSystem.foodLeft() + eatSystem.powerLeft());
 
         if (gameState == GameState::Playing) {
-            PickupResult got = pickups.update(dt, player.getPosition(), dotsEaten);
+            PickupResult got = pickups.update(gdt, player.getPosition(), dotsEaten);
             if (got.points > 0) {
                 eatSystem.addScore(got.points);
                 audio.play(Sfx::Fruit);
@@ -337,10 +433,14 @@ int main()
             }
         }
         EnemyResult hit;
-        if (gameState == GameState::Playing) hit = enemies.update(dt, player.getPosition(),
+        if (gameState == GameState::Playing) hit = enemies.update(gdt, player.getPosition(),
                                          static_cast<int>(player.getDirection()), dotsEaten);
         eatSystem.addScore(hit.score);
-        if (hit.ghostsEaten > 0) audio.play(Sfx::EatGhost);
+        if (hit.ghostsEaten > 0) {
+            audio.play(Sfx::EatGhost);
+            ghostFreeze = 1.0f;                      // freeze for a second, score shows
+            enemies.hideEaten(true);
+        }
         if (hit.ghostsEaten > 0) hud.addPopup(std::to_string(hit.score), hit.eatenAt, 1.0f);
 
                 if (hit.playerHit && gameState == GameState::Playing) {
@@ -354,6 +454,15 @@ int main()
             gameState = GameState::LevelClear;
             stateTimer = 0.f;
             levelFlashStarted = false;
+        }
+
+        // Intermission cutscene after clearing level 2
+        if (gameState == GameState::Ready && cutscenePending) {
+            cutscenePending = false;
+            audio.stopAll();
+            loading.start();
+            loading.setShowLoadingUi(false);
+            gameState = GameState::Cutscene;
         }
 
         // Entering a new state
@@ -416,7 +525,9 @@ int main()
 
                 passVisible = false;
                 nextLevelRequested = false;
-                ++level;                                                      // next level, next fruit
+                ++level;
+                enemies.markNewLevel();
+                cutscenePending = (level == 3);       // intermission cutscene after clearing level 2                                                      // next level, next fruit
                 pickups.setLevel(level);
 
                 int keepScore = eatSystem.getScore();
@@ -440,7 +551,7 @@ int main()
             // (no maze flash on death)   // flashes until the animation ends (stopped below)
         } else if (gameState == GameState::Dying && player.deathFinished()) {
             if (--lives <= 0) gameState = GameState::GameOver;     // out of lives
-            else              gameState = GameState::Respawn;           // short pause on the empty maze
+            else              { gameState = GameState::Respawn; enemies.markDeath(dotsEaten); }           // short pause on the empty maze
             stateTimer = 0.f;
         } else if (gameState == GameState::Respawn && stateTimer >= 1.0f) {
             gameState = GameState::Ready;
@@ -475,12 +586,26 @@ int main()
 
         window.clear(sf::Color::Black);
 
+        if (gameState == GameState::Cutscene) {
+            loading.update(dt);
+            if (loading.finished() || skipLoading) {
+                skipLoading = false;
+                loading.setShowLoadingUi(true);
+                stateTimer = 0.f;
+                gameState = GameState::Ready;         // the new level starts with READY!
+            } else {
+                loading.draw(window);
+                window.display();
+                continue;
+            }
+        }
+
         if (gameState == GameState::Loading) {
             loading.update(dt);
             if (loading.finished() || skipLoading) {
                 skipLoading = false;
                 startLock = 0.5f;
-                if (!fullscreen) setFullscreen(true);   // go fullscreen when the intro ends                 // Enter must not also start the game
+                if (!fullscreen && autoFullscreen) setFullscreen(true);   // go fullscreen when the intro ends                 // Enter must not also start the game
                 title.reset();
                 stateTimer = 0.f;
                 gameState = GameState::Title;     // continues to the home page below
@@ -502,6 +627,7 @@ int main()
                 lives = 3;
                 level = 1;
                 pickups.setLevel(1);
+                enemies.markNewLevel();
                 enemies.reset();
                 player.revive();
                 player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
@@ -511,7 +637,8 @@ int main()
                 gameState = GameState::Ready;
             } else {
                 title.draw(window);
-                titlePanel.draw(window);
+                if (showInfo) infoPanel.draw(window);
+                else          titlePanel.draw(window);
                 if (volumeToast > 0.f)
                     hudPanel.drawVolumeToast(window, audio.volume() / 100.f, audio.muted());
                 hud.setLives(0);                      // no life icons on the home page
@@ -528,7 +655,7 @@ int main()
                            (gameState == GameState::Ready && !(firstStart && stateTimer < 1.8f));
         if (showEnemies)
             enemies.draw(window);
-        if (!(gameState == GameState::Ready && firstStart && stateTimer < 1.8f))
+        if (ghostFreeze <= 0.f && !(gameState == GameState::Ready && firstStart && stateTimer < 1.8f))
             player.draw(window);                   // hidden during the first part of the intro
 
         if (paused)                                                pausePanel.draw(window);
@@ -544,6 +671,10 @@ int main()
     {
         std::ofstream f("main/assets/TxT/volume.txt");
         if (f) f << audio.volume() << "\n";
+    }
+    {
+        std::ofstream s("main/assets/TxT/settings.txt");
+        if (s) s << (autoFullscreen ? 1 : 0) << "\n";
     }
     return 0;
 }
