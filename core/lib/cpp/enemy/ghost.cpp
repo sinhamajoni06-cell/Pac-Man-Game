@@ -96,8 +96,9 @@ void Ghost::getEaten() {
 float Ghost::currentSpeed() const {
     if (m_state == State::Eaten) return kSpeedEyes;
     bool tunnel = (m_row == 14) && (m_col <= 4 || m_col >= 23);
-    if (tunnel) return kSpeedTunnel;
-    return m_frightened ? kSpeedFright : kSpeedNormal;
+    if (tunnel) return m_vTunnel;
+    if (m_frightened) return m_vFright;
+    return m_elroySpeed > 0.f ? m_elroySpeed : m_vNormal;
 }
 
 bool Ghost::followPath(float dist) {
@@ -128,7 +129,7 @@ void Ghost::chooseDirection(const GhostContext& ctx) {
 
     sf::Vector2f target{0.f, 0.f};
     if (m_state == State::Eaten)  target = {13.5f, 11.f};              // above the door
-    else if (!scared)             target = ctx.chase
+    else if (!scared)             target = (ctx.chase || m_elroySpeed > 0.f)
                                          ? chaseTarget(ctx, {static_cast<float>(m_col), static_cast<float>(m_row)})
                                          : scatterTarget();
 
@@ -239,6 +240,7 @@ void Ghost::update(float dt, const GhostContext& ctx) {
 
 void Ghost::draw(sf::RenderTarget& target, sf::Vector2f origin, float scale) {
     sf::Vector2f p = origin + m_pos * scale;
+    if (m_hidden) return;                       // hidden during the ghost-eaten freeze
     const bool eyesOnly = (m_state == State::Eaten || m_state == State::Entering);
 
     if (eyesOnly) {
