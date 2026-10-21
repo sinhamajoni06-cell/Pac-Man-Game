@@ -106,13 +106,25 @@ void Player::setDirection(Direction d) {
 void Player::handleInput() {
     namespace K = sf::Keyboard;
 
-    const bool down[4] = {
+    bool down[4] = {
         K::isKeyPressed(K::Key::Up)    || K::isKeyPressed(K::Key::W),
         K::isKeyPressed(K::Key::Down)  || K::isKeyPressed(K::Key::S),
         K::isKeyPressed(K::Key::Left)  || K::isKeyPressed(K::Key::A),
         K::isKeyPressed(K::Key::Right) || K::isKeyPressed(K::Key::D)
     };
     const Direction dirs[4] = {Direction::Up, Direction::Down, Direction::Left, Direction::Right};
+
+    // Gamepad: left stick or D-pad counts as held keys
+    if (sf::Joystick::isConnected(0)) {
+        float jx = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::X);
+        float jy = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::Y);
+        float px = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::PovX);
+        float py = sf::Joystick::getAxisPosition(0, sf::Joystick::Axis::PovY);
+        if (jy < -50.f || py >  50.f) down[0] = true;     // up
+        if (jy >  50.f || py < -50.f) down[1] = true;     // down
+        if (jx < -50.f || px < -50.f) down[2] = true;     // left
+        if (jx >  50.f || px >  50.f) down[3] = true;     // right
+    }
 
     // Ordered list of held keys: the newest held key is the wanted direction.
     // Releasing a key removes it, which cancels a pending turn.
