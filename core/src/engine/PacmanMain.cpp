@@ -192,13 +192,16 @@ static int gameMain()
     bool  passVisible = false;            // the LEVEL CLEAR screen is showing
     bool  nextLevelRequested = false;     // NEXT LEVEL was chosen
     float volumeToast = 0.f;
-    bool  showInfo = false;           // the INFO screen is showing              // time left for the little volume box
+    bool  showInfo = false;
+    bool  showModeSelect = false;     // the SELECT MODE screen is showing
+    bool  modeComingSoon = false;     // "COMING SOON!" is showing
+    bool  classicRequested = false;   // CLASSIC was chosen           // the INFO screen is showing              // time left for the little volume box
 
     // Menu screens (buttons are clickable with the mouse)
     if (!Panel::loadFont("main/assets/TxT/PressStart2P-Regular.ttf"))
         return 1;
-    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel;
-    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel})
+    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel, modePanel;
+    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel, &modePanel})
         p->setTransform(gameMap.getPosition(), gameMap.getScale());
     Menus::buildTitle(titlePanel);
     Menus::buildHudButtons(hudPanel);
@@ -279,12 +282,24 @@ static int gameMain()
     auto onButton = [&](int id) {
         switch (id) {
             case Menus::BtnPlay:
+                showModeSelect = true;                 // choose Classic or Word Finding first
+                modeComingSoon = false;
+                Menus::buildModeSelect(modePanel, false);
+                startLock = 0.4f;                      // the same key press must not also pick a mode
+                break;
+            case Menus::BtnClassic:
+                classicRequested = true;
+                break;
+            case Menus::BtnWordMode:
+                modeComingSoon = true;                 // not made yet
+                Menus::buildModeSelect(modePanel, true);
+                break;
             case Menus::BtnRetry:  startNewGame(); break;
             case Menus::BtnNext:   nextLevelRequested = true; break;
-            case Menus::BtnMenu:   goToMenu(); break;
+            case Menus::BtnMenu:   showModeSelect = false; modeComingSoon = false; goToMenu(); break;
             case Menus::BtnQuit:   window.close(); break;
             case Menus::BtnInfo:   showInfo = true;  break;
-            case Menus::BtnBack:   showInfo = false; break;
+            case Menus::BtnBack:   showInfo = false; showModeSelect = false; modeComingSoon = false; break;
             case Menus::BtnPause:  if (gameState == GameState::Playing) setPausedState(true); break;
             case Menus::BtnResume: setPausedState(false); break;
             case Menus::BtnMute:
@@ -299,7 +314,7 @@ static int gameMain()
     auto activePanel = [&]() -> Panel* {
         if (paused) return &pausePanel;
         switch (gameState) {
-            case GameState::Title:       return showInfo ? &infoPanel : &titlePanel;
+            case GameState::Title:       return showModeSelect ? &modePanel : (showInfo ? &infoPanel : &titlePanel);
             case GameState::Playing:     return &hudPanel;
             case GameState::DeathScreen: return &deathPanel;
             case GameState::LevelClear:  return passVisible ? &passPanel : nullptr;
@@ -355,6 +370,10 @@ static int gameMain()
                 }
                 if (key->code == sf::Keyboard::Key::Hyphen || key->code == sf::Keyboard::Key::Subtract) changeVolume(-5.f);
                 if (key->code == sf::Keyboard::Key::Equal  || key->code == sf::Keyboard::Key::Add)      changeVolume(5.f);
+                if (gameState == GameState::Title && showModeSelect && startLock <= 0.f) {
+                    if (key->code == sf::Keyboard::Key::Enter && !key->alt) classicRequested = true;
+                    if (key->code == sf::Keyboard::Key::Escape) { showModeSelect = false; modeComingSoon = false; }
+                }
                 if (key->code == sf::Keyboard::Key::Escape && showInfo) showInfo = false;
                 if (key->code == sf::Keyboard::Key::Escape) {
                     if (paused) setPausedState(false);
@@ -617,10 +636,20 @@ static int gameMain()
         }
         if (gameState == GameState::Title) {
             title.update(dt);
-            if (title.startRequested() && startLock <= 0.f &&
+            if (title.startRequested() && startLock <= 0.f && !showModeSelect && !showInfo &&
+                !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt) &&
+                !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RAlt)) {
+                showModeSelect = true;                         // choose a mode first
+                modeComingSoon = false;
+                Menus::buildModeSelect(modePanel, false);
+                startLock = 0.4f;
+            }
+            if (classicRequested &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt) &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RAlt)) {
                 // Fresh game
+                classicRequested = false;
+                showModeSelect = false;
                 audio.stopAll();
                 audio.play(Sfx::GameStart);
                 eatSystem.reset();                    // dots back, score 0
@@ -636,8 +665,9 @@ static int gameMain()
                 stateTimer = 0.f;
                 gameState = GameState::Ready;
             } else {
-                title.draw(window);
-                if (showInfo) infoPanel.draw(window);
+                if (!showModeSelect) title.draw(window);
+                if (showModeSelect) modePanel.draw(window);
+                else if (showInfo) infoPanel.draw(window);
                 else          titlePanel.draw(window);
                 if (volumeToast > 0.f)
                     hudPanel.drawVolumeToast(window, audio.volume() / 100.f, audio.muted());
