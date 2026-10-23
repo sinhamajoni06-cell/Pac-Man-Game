@@ -1,4 +1,4 @@
-# Pac-Man-Game
+# Pac-Man-Game (`v-0.2.0`)
 The game with mixer of word finding genre!
 
 <div align="center">
