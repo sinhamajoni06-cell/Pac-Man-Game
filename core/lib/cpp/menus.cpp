@@ -80,3 +80,17 @@ void Menus::buildInfo(Panel& p) {
     p.addText("NOT AFFILIATED WITH BANDAI NAMCO", {112.f, 216.f}, kWhite, 6.f);
     p.addButton(BtnBack, "BACK", {112.f, 240.f}, {64.f, 14.f});
 }
+
+void Menus::buildModeSelect(Panel& p, bool comingSoon) {
+    p.clear();
+    p.addText("SELECT MODE", {112.f, 52.f}, kYellow, 16.f);
+
+    p.addButton(BtnClassic, "CLASSIC", {112.f, 104.f}, {120.f, 18.f});
+    p.addText("THE ARCADE GAME", {112.f, 122.f}, kCyan, 6.f);
+
+    p.addButton(BtnWordMode, "WORD FINDING", {112.f, 150.f}, {120.f, 18.f});
+    if (comingSoon) p.addText("COMING SOON!", {112.f, 170.f}, kRed, 8.f);
+    else            p.addText("A NEW WAY TO PLAY", {112.f, 168.f}, kCyan, 6.f);
+
+    p.addButton(BtnBack, "BACK", {112.f, 214.f}, {64.f, 14.f});
+}
