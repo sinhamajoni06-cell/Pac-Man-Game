@@ -65,7 +65,13 @@ void Panel::setSliderFromMouse(sf::Vector2f mapPos) {
 
 void Panel::mouseMoved(sf::Vector2f world) {
     sf::Vector2f m = toMap(world);
-    for (ButtonItem& b : m_buttons) b.hover = b.rect.contains(m);
+    int hoveredId = 0;
+    for (ButtonItem& b : m_buttons) {
+        b.hover = b.rect.contains(m);
+        if (b.hover) hoveredId = b.id;
+    }
+    if (hoveredId > 0)         { m_focusId = hoveredId; m_focusFromMouse = true; }
+    else if (m_focusFromMouse) { m_focusId = 0;         m_focusFromMouse = false; }
     if (m_slider.dragging) setSliderFromMouse(m);
 }
 
@@ -123,10 +129,10 @@ void Panel::draw(sf::RenderTarget& target) {
         drawText(target, t.text, t.pos, t.color, t.size, t.align);
 
     for (const ButtonItem& b : m_buttons) {
-        drawRect(target, b.rect, b.hover ? kBlue : sf::Color::Black,
-                 b.hover ? kYellow : kLavender, 1.f);
+        drawRect(target, b.rect, (b.id == m_focusId) ? kBlue : sf::Color::Black,
+                 (b.id == m_focusId) ? kYellow : kLavender, 1.f);
         drawText(target, b.label, b.rect.position + b.rect.size / 2.f,
-                 b.hover ? kYellow : sf::Color::White, 8.f, Align::Center);
+                 (b.id == m_focusId) ? kYellow : sf::Color::White, 8.f, Align::Center);
     }
 
     if (m_slider.active) {
@@ -156,4 +162,26 @@ void Panel::drawVolumeToast(sf::RenderTarget& target, float volume01, bool muted
         drawRect(target, sf::FloatRect({73.f + 8.f * static_cast<float>(i), 130.f}, {6.f, 4.f}),
                  on ? kYellow : sf::Color(60, 60, 100), sf::Color::Transparent, 0.f);
     }
+}
+
+void Panel::keyNavigate(int delta) {
+    if (m_buttons.empty()) return;
+    const int n = static_cast<int>(m_buttons.size());
+
+    int cur = -1;
+    for (int i = 0; i < n; ++i)
+        if (m_buttons[static_cast<size_t>(i)].id == m_focusId) cur = i;
+
+    int next;
+    if (cur < 0) next = (delta > 0) ? 0 : n - 1;       // first press: start at the first (or last) button
+    else         next = (cur + delta + n) % n;          // wraps around
+
+    m_focusId = m_buttons[static_cast<size_t>(next)].id;
+    m_focusFromMouse = false;
+}
+
+int Panel::focusedId() const {
+    for (const ButtonItem& b : m_buttons)
+        if (b.id == m_focusId) return m_focusId;
+    return 0;
 }
