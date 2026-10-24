@@ -76,6 +76,7 @@ bool EatSystem::load(const std::string& dir) {
 
 void EatSystem::reset() {
     m_foodLeft = m_powerLeft = 0;
+    m_reserved = 0;
     for (Dot& d : m_dots) {
         d.eaten = false;
         (d.power ? m_powerLeft : m_foodLeft)++;
@@ -122,4 +123,13 @@ void EatSystem::draw(sf::RenderTarget& target) {
         s.setScale({m_scale, m_scale});
         target.draw(s);
     }
+}
+
+void EatSystem::reserveDot(int i) {
+    if (i < 0 || i >= static_cast<int>(m_dots.size())) return;
+    Dot& d = m_dots[static_cast<size_t>(i)];
+    if (d.eaten || d.power) return;
+    d.eaten = true;                // not drawn and not eatable anymore
+    --m_foodLeft;
+    ++m_reserved;
 }
