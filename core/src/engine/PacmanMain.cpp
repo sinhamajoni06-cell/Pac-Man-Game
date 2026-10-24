@@ -16,6 +16,7 @@
 #include <string>
 #include "ui_panel.h"
 #include "menus.h"
+#include "slot_machine.h"
 #include <iostream>
 #include <sstream>
 #ifdef _WIN32
@@ -200,12 +201,18 @@ static int gameMain()
     // Menu screens (buttons are clickable with the mouse)
     if (!Panel::loadFont("main/assets/TxT/PressStart2P-Regular.ttf"))
         return 1;
-    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel, modePanel;
-    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel, &modePanel})
+    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel, modePanel, slotPanel;
+    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel, &modePanel, &slotPanel})
         p->setTransform(gameMap.getPosition(), gameMap.getScale());
     Menus::buildTitle(titlePanel);
     Menus::buildHudButtons(hudPanel);
     Menus::buildInfo(infoPanel);
+
+    SlotMachine slot;
+    if (!slot.load("main/assets", "main/Data/word.txt"))
+        return 1;
+    slot.setTransform(gameMap.getPosition(), gameMap.getScale());
+    bool showWordSlot = false;        // the slot machine screen is showing
 
     {   // volume from the last run
         std::ifstream f("main/assets/TxT/volume.txt");
@@ -287,19 +294,34 @@ static int gameMain()
                 Menus::buildModeSelect(modePanel, false);
                 startLock = 0.4f;                      // the same key press must not also pick a mode
                 break;
+            case Menus::BtnSpin:
+                slot.start();
+                Menus::buildWordSlot(slotPanel, false, 0);
+                break;
             case Menus::BtnClassic:
                 classicRequested = true;
                 break;
             case Menus::BtnWordMode:
                 modeComingSoon = true;                 // not made yet
-                Menus::buildModeSelect(modePanel, true);
+                showModeSelect = false;
+                showWordSlot = true;
+                slot.start();
+                Menus::buildWordSlot(slotPanel, false, 0);
                 break;
             case Menus::BtnRetry:  startNewGame(); break;
             case Menus::BtnNext:   nextLevelRequested = true; break;
             case Menus::BtnMenu:   showModeSelect = false; modeComingSoon = false; goToMenu(); break;
             case Menus::BtnQuit:   window.close(); break;
             case Menus::BtnInfo:   showInfo = true;  break;
-            case Menus::BtnBack:   showInfo = false; showModeSelect = false; modeComingSoon = false; break;
+            case Menus::BtnBack:   if (showWordSlot) {
+                    showWordSlot = false;
+                    showModeSelect = true;
+                    modeComingSoon = false;
+                    Menus::buildModeSelect(modePanel, false);
+                } else {
+                    showInfo = false; showModeSelect = false; modeComingSoon = false;
+                }
+                break;
             case Menus::BtnPause:  if (gameState == GameState::Playing) setPausedState(true); break;
             case Menus::BtnResume: setPausedState(false); break;
             case Menus::BtnMute:
@@ -314,7 +336,7 @@ static int gameMain()
     auto activePanel = [&]() -> Panel* {
         if (paused) return &pausePanel;
         switch (gameState) {
-            case GameState::Title:       return showModeSelect ? &modePanel : (showInfo ? &infoPanel : &titlePanel);
+            case GameState::Title:       return showWordSlot ? &slotPanel : (showModeSelect ? &modePanel : (showInfo ? &infoPanel : &titlePanel));
             case GameState::Playing:     return &hudPanel;
             case GameState::DeathScreen: return &deathPanel;
             case GameState::LevelClear:  return passVisible ? &passPanel : nullptr;
@@ -373,6 +395,11 @@ static int gameMain()
                 if (gameState == GameState::Title && showModeSelect && startLock <= 0.f) {
                     if (key->code == sf::Keyboard::Key::Enter && !key->alt) classicRequested = true;
                     if (key->code == sf::Keyboard::Key::Escape) { showModeSelect = false; modeComingSoon = false; }
+                }
+                if (key->code == sf::Keyboard::Key::Escape && showWordSlot) {
+                    showWordSlot = false;
+                    showModeSelect = true;
+                    Menus::buildModeSelect(modePanel, false);
                 }
                 if (key->code == sf::Keyboard::Key::Escape && showInfo) showInfo = false;
                 if (key->code == sf::Keyboard::Key::Escape) {
@@ -636,7 +663,17 @@ static int gameMain()
         }
         if (gameState == GameState::Title) {
             title.update(dt);
-            if (title.startRequested() && startLock <= 0.f && !showModeSelect && !showInfo &&
+            if (showWordSlot) {
+                int stoppedBefore = slot.stoppedReels();
+                bool wasFinished = slot.finished();
+                slot.update(dt);
+                if (slot.stoppedReels() > stoppedBefore) audio.play(Sfx::Dot);   // tick when a reel stops
+                if (!wasFinished && slot.finished()) {
+                    audio.play(Sfx::Fruit);                                       // word found
+                    Menus::buildWordSlot(slotPanel, true, static_cast<int>(slot.word().size()));
+                }
+            }
+            if (title.startRequested() && startLock <= 0.f && !showModeSelect && !showInfo && !showWordSlot &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt) &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RAlt)) {
                 showModeSelect = true;                         // choose a mode first
@@ -665,8 +702,9 @@ static int gameMain()
                 stateTimer = 0.f;
                 gameState = GameState::Ready;
             } else {
-                if (!showModeSelect) title.draw(window);
-                if (showModeSelect) modePanel.draw(window);
+                if (!showModeSelect && !showWordSlot) title.draw(window);
+                if (showWordSlot) { slot.draw(window); slotPanel.draw(window); }
+                else if (showModeSelect) modePanel.draw(window);
                 else if (showInfo) infoPanel.draw(window);
                 else          titlePanel.draw(window);
                 if (volumeToast > 0.f)
