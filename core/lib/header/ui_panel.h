@@ -28,6 +28,11 @@ public:
     int  mousePressed(sf::Vector2f world);              // id of the clicked button, or 0
     void mouseReleased();
 
+    // Keyboard: arrows move the highlight, Enter uses it
+    void keyNavigate(int delta);        // -1 = previous button, +1 = next (wraps around)
+    int  focusedId() const;             // id of the highlighted button, or 0 if none
+    void resetFocus() { m_focusId = 0; m_focusFromMouse = false; }
+
     void draw(sf::RenderTarget& target);
     void drawVolumeToast(sf::RenderTarget& target, float volume01, bool muted);
 
@@ -47,6 +52,8 @@ private:
     std::vector<TextItem>   m_texts;
     std::vector<ButtonItem> m_buttons;
     SliderItem m_slider;
+    int  m_focusId = 0;                 // highlighted button (0 = none); kept when a screen is rebuilt
+    bool m_focusFromMouse = false;
     int   m_dim = 0;
 
     sf::Vector2f m_origin{0.f, 0.f};
