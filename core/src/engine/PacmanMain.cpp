@@ -214,11 +214,9 @@ static int gameMain()
     slot.setTransform(gameMap.getPosition(), gameMap.getScale());
     bool showWordSlot = false;        // the slot machine screen is showing
 
-    {   // volume from the last run
-        std::ifstream f("main/assets/TxT/volume.txt");
-        float v = 0.f;
-        if (f >> v) audio.setVolume(v);
-    }
+    // Sound settings from the last run (volume and mute)
+    audio.setSettingsFile("main/Data/User_data/sound_settings.txt");
+    audio.loadSettings();
 
     float ghostFreeze = 0.f;          // game freezes for a moment when a ghost is eaten
     float eatPause = 0.f;             // tiny pause after every dot
@@ -250,6 +248,7 @@ static int gameMain()
         enemies.reset();
         player.revive();
         spawnPlayer();
+        enemies.markNewLevel();
         extraLifeGiven = false;
         paused = false;
         passVisible = false;
@@ -770,10 +769,6 @@ static int gameMain()
         window.display();
     }
     hud.saveHighScore("main/assets/TxT/highscore.txt");
-    {
-        std::ofstream f("main/assets/TxT/volume.txt");
-        if (f) f << audio.volume() << "\n";
-    }
     {
         std::ofstream s("main/assets/TxT/settings.txt");
         if (s) s << (autoFullscreen ? 1 : 0) << "\n";
