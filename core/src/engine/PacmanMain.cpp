@@ -347,7 +347,17 @@ static int gameMain()
     while (window.isOpen())
     {
         float dt = std::min(clock.restart().asSeconds(), 0.05f);
-        float realDt = dt;                      // keeps running while the game is paused
+        float realDt = dt;
+
+        // When the screen on display changes, start with no button highlighted
+        {
+            static Panel* lastPanel = nullptr;
+            Panel* cur = activePanel();
+            if (cur != lastPanel) {
+                if (cur) cur->resetFocus();
+                lastPanel = cur;
+            }
+        }                      // keeps running while the game is paused
         if (paused) dt = 0.f;
         if (volumeToast > 0.f) volumeToast -= realDt;
         if (startLock > 0.f) startLock -= dt;
@@ -377,6 +387,30 @@ static int gameMain()
                 window.close();
 
             if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                // Menu keys: arrows move the highlight, Enter uses it
+                bool enterConsumed = false;
+                {
+                    Panel* nav = activePanel();
+                    if (nav == &hudPanel) nav = nullptr;      // while playing the arrows steer Pac-Man
+                    if (nav) {
+                        using NavKey = sf::Keyboard::Key;
+                        const bool left  = key->code == NavKey::Left;
+                        const bool right = key->code == NavKey::Right;
+
+                        if (paused && (left || right))
+                            changeVolume(right ? 5.f : -5.f);          // pause menu: left/right = volume
+                        else if (key->code == NavKey::Up || left)
+                            nav->keyNavigate(-1);
+                        else if (key->code == NavKey::Down || right)
+                            nav->keyNavigate(+1);
+                        else if (key->code == NavKey::Enter && !key->alt && nav->focusedId() > 0) {
+                            int id = nav->focusedId();
+                            enterConsumed = true;
+                            startLock = std::max(startLock, 0.4f);  // Enter must not also start the game
+                            onButton(id);
+                        }
+                    }
+                }
                 if (key->code == sf::Keyboard::Key::F11 ||
                     (key->code == sf::Keyboard::Key::Enter && key->alt))
                     { setFullscreen(!fullscreen); autoFullscreen = fullscreen; }
@@ -406,7 +440,7 @@ static int gameMain()
                     if (paused) setPausedState(false);
                     else if (gameState == GameState::Playing) setPausedState(true);
                 }
-                if (key->code == sf::Keyboard::Key::Enter && !key->alt) {     // Enter = the main button
+                if (key->code == sf::Keyboard::Key::Enter && !key->alt && !enterConsumed) {     // Enter = the main button
                     if (paused) setPausedState(false);
                     else if (gameState == GameState::DeathScreen) startNewGame();
                     else if (gameState == GameState::LevelClear && passVisible) nextLevelRequested = true;
