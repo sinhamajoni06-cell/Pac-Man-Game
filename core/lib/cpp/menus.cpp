@@ -106,9 +106,23 @@ void Menus::buildWordSlot(Panel& p, bool finished, int letters) {
     p.clear();
     if (finished) {
         p.addText("YOUR WORD HAS " + std::to_string(letters) + " LETTERS", {112.f, 168.f}, kCyan);
-        p.addButton(BtnSpin, "SPIN AGAIN", {112.f, 196.f}, kBtn);
+        p.addButton(BtnSpin,     "SPIN AGAIN", {60.f, 196.f},  {96.f, 16.f});
+        p.addButton(BtnPlayWord, "PLAY",       {160.f, 196.f}, {64.f, 16.f});
+        p.addButton(BtnBack,     "BACK",       {112.f, 222.f}, {64.f, 14.f});
     } else {
         p.addText("SPINNING...", {112.f, 168.f}, kYellow);
+        p.addButton(BtnBack, "BACK", {112.f, 196.f}, {64.f, 14.f});
     }
-    p.addButton(BtnBack, "BACK", {112.f, finished ? 220.f : 196.f}, kBtn);
+}
+
+void Menus::buildWordWin(Panel& p, const std::string& word, int level, int score) {
+    p.clear();
+    p.setDim(215);
+    p.addText("WORD FOUND!", {112.f, 56.f}, kYellow, 16.f);
+    p.addText(word, {112.f, 90.f}, kCyan, 16.f);
+    p.addText("LEVEL " + std::to_string(level), {112.f, 116.f}, kOrange);
+    p.addText("SCORE", {112.f, 136.f}, kCyan);
+    p.addText(std::to_string(score), {112.f, 148.f}, kWhite);
+    p.addButton(BtnNext, "NEXT WORD", {112.f, 182.f}, kBtn);
+    p.addButton(BtnMenu, "MENU",      {112.f, 206.f}, kBtn);
 }
