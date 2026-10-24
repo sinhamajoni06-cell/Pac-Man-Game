@@ -225,3 +225,9 @@ void SlotMachine::draw(sf::RenderTarget& target) {
         target.setView(old);
     }
 }
+
+std::string SlotMachine::randomWord() {
+    if (m_words.empty()) return "APPLE";
+    std::uniform_int_distribution<size_t> pick(0, m_words.size() - 1);
+    return m_words[pick(m_rng)];
+}
