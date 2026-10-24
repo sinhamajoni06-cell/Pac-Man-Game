@@ -65,20 +65,27 @@ void Menus::buildPass(Panel& p, int level, int score) {
 void Menus::buildInfo(Panel& p) {
     p.clear();
     p.setDim(235);
-    p.addText("HOW TO PLAY",                {112.f, 24.f},  kYellow);
-    p.addText("MOVE: ARROWS / WASD",        {112.f, 46.f},  kWhite);
-    p.addText("PAUSE: P OR ESC",            {112.f, 60.f},  kWhite);
-    p.addText("MUTE: M",                    {112.f, 74.f},  kWhite);
-    p.addText("VOLUME: - / = / WHEEL",      {112.f, 88.f},  kWhite);
-    p.addText("FULLSCREEN: F11",            {112.f, 102.f}, kWhite);
-    p.addText("EAT ALL THE DOTS",           {112.f, 126.f}, kCyan);
-    p.addText("POWER PELLETS LET YOU",      {112.f, 140.f}, kCyan);
-    p.addText("EAT THE GHOSTS",             {112.f, 152.f}, kCyan);
-    p.addText(std::string("WORD-MAN  V") + WORDMAN_VERSION, {112.f, 178.f}, kYellow);
-    p.addText("FONT: PRESS START 2P",       {112.f, 194.f}, kWhite, 6.f);
-    p.addText("FAN-MADE PROJECT",           {112.f, 206.f}, kWhite, 6.f);
-    p.addText("NOT AFFILIATED WITH BANDAI NAMCO", {112.f, 216.f}, kWhite, 6.f);
-    p.addButton(BtnBack, "BACK", {112.f, 240.f}, {64.f, 14.f});
+    p.addText("HOW TO PLAY",                  {112.f, 22.f},  kYellow);
+
+    p.addText("MOVE: ARROWS / WASD",          {112.f, 42.f},  kWhite);
+    p.addText("GAMEPAD: STICK / D-PAD",       {112.f, 54.f},  kWhite);
+    p.addText("PAUSE: P OR ESC",              {112.f, 66.f},  kWhite);
+    p.addText("MUTE: M",                      {112.f, 78.f},  kWhite);
+    p.addText("VOLUME: - / = / WHEEL",        {112.f, 90.f},  kWhite);
+    p.addText("FULLSCREEN: F11/ALT+ENTER",    {112.f, 102.f}, kWhite);
+    p.addText("MENUS: ARROWS + ENTER",        {112.f, 114.f}, kWhite);
+    p.addText("MOUSE: CLICK BUTTONS",         {112.f, 126.f}, kWhite);
+
+    p.addText("EAT ALL THE DOTS",             {112.f, 148.f}, kCyan);
+    p.addText("POWER PELLETS LET YOU",        {112.f, 160.f}, kCyan);
+    p.addText("EAT THE GHOSTS",               {112.f, 172.f}, kCyan);
+
+    p.addText(std::string("WORD-MAN  V") + WORDMAN_VERSION, {112.f, 190.f}, kYellow);
+    p.addText("FONT: PRESS START 2P",         {112.f, 204.f}, kWhite, 6.f);
+    p.addText("FAN-MADE PROJECT",             {112.f, 214.f}, kWhite, 6.f);
+    p.addText("NOT AFFILIATED WITH BANDAI NAMCO", {112.f, 224.f}, kWhite, 6.f);
+
+    p.addButton(BtnBack, "BACK", {112.f, 242.f}, {64.f, 14.f});
 }
 
 void Menus::buildModeSelect(Panel& p, bool comingSoon) {
