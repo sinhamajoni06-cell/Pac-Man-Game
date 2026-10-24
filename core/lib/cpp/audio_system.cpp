@@ -1,6 +1,7 @@
 #include "audio_system.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 
@@ -167,10 +168,35 @@ void Audio::applyVolume() {
 
 void Audio::setVolume(float percent) {
     m_volume = std::clamp(percent, 0.f, 100.f);
+    saveSettings();
     applyVolume();
 }
 
 void Audio::toggleMute() {
     m_muted = !m_muted;
+    saveSettings();
     applyVolume();
+}
+
+bool Audio::loadSettings() {
+    if (m_settingsPath.empty()) return false;
+    std::ifstream f(m_settingsPath);
+    float v = 0.f;
+    if (!(f >> v)) return false;                  // no saved file yet: keep the defaults
+
+    m_volume = std::clamp(v, 0.f, 100.f);
+    int muted = 0;
+    if (f >> muted) m_muted = (muted != 0);
+    applyVolume();                                // applies without writing the file again
+    return true;
+}
+
+void Audio::saveSettings() const {
+    if (m_settingsPath.empty()) return;
+    std::error_code ec;
+    std::filesystem::path p(m_settingsPath);
+    if (p.has_parent_path()) std::filesystem::create_directories(p.parent_path(), ec);
+
+    std::ofstream f(m_settingsPath);
+    if (f) f << m_volume << "\n" << (m_muted ? 1 : 0) << "\n";
 }
