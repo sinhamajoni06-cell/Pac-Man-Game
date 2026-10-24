@@ -94,3 +94,14 @@ void Menus::buildModeSelect(Panel& p, bool comingSoon) {
 
     p.addButton(BtnBack, "BACK", {112.f, 214.f}, {64.f, 14.f});
 }
+
+void Menus::buildWordSlot(Panel& p, bool finished, int letters) {
+    p.clear();
+    if (finished) {
+        p.addText("YOUR WORD HAS " + std::to_string(letters) + " LETTERS", {112.f, 168.f}, kCyan);
+        p.addButton(BtnSpin, "SPIN AGAIN", {112.f, 196.f}, kBtn);
+    } else {
+        p.addText("SPINNING...", {112.f, 168.f}, kYellow);
+    }
+    p.addButton(BtnBack, "BACK", {112.f, finished ? 220.f : 196.f}, kBtn);
+}
