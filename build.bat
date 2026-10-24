@@ -134,6 +134,10 @@ if exist "main\assets" (
     echo [INFO] main\assets not found - skipping asset sync.
 )
 
+if exist "main\Data" (
+    robocopy "main\Data" "%OUT_DIR%\main\Data" /E /XO /NFL /NDL /NJH /NJS /NC /NS /NP >nul
+)
+
 set "BIN=%MSYS2_ROOT%\ucrt64\bin"
 xcopy /y /d "%BIN%\*sfml*.dll"             "%OUT_DIR%\" >nul 2>nul
 xcopy /y /d "%BIN%\libfreetype-6.dll"      "%OUT_DIR%\" >nul 2>nul
