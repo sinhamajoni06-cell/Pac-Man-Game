@@ -17,6 +17,7 @@
 #include "ui_panel.h"
 #include "menus.h"
 #include "slot_machine.h"
+#include "word_mode.h"
 #include <iostream>
 #include <sstream>
 #ifdef _WIN32
@@ -212,7 +213,16 @@ static int gameMain()
     if (!slot.load("main/assets", "main/Data/word.txt"))
         return 1;
     slot.setTransform(gameMap.getPosition(), gameMap.getScale());
-    bool showWordSlot = false;        // the slot machine screen is showing
+    bool showWordSlot = false;
+
+    WordMode wordMode;
+    if (!wordMode.load("main/assets/TxT/PressStart2P-Regular.ttf"))
+        return 1;
+    wordMode.setTransform(gameMap.getPosition(), gameMap.getScale());
+    bool        wordModeActive = false;       // the current game is Word Finding
+    bool        wordModeRequested = false;    // PLAY was pressed on the slot screen
+    bool        wordRoundNeeded = false;      // scatter new letters when the round is ready
+    std::string roundWord;                    // word for the next round ("" = pick a random one)        // the slot machine screen is showing
 
     // Sound settings from the last run (volume and mute)
     audio.setSettingsFile("main/Data/User_data/sound_settings.txt");
@@ -293,6 +303,15 @@ static int gameMain()
                 Menus::buildModeSelect(modePanel, false);
                 startLock = 0.4f;                      // the same key press must not also pick a mode
                 break;
+            case Menus::BtnPlayWord:
+                if (slot.finished()) {
+                    roundWord = slot.word();
+                    wordRoundNeeded = true;
+                    wordModeRequested = true;
+                    showWordSlot = false;
+                    startLock = 0.4f;
+                }
+                break;
             case Menus::BtnSpin:
                 slot.start();
                 Menus::buildWordSlot(slotPanel, false, 0);
@@ -307,7 +326,7 @@ static int gameMain()
                 slot.start();
                 Menus::buildWordSlot(slotPanel, false, 0);
                 break;
-            case Menus::BtnRetry:  startNewGame(); break;
+            case Menus::BtnRetry:  wordRoundNeeded = true; startNewGame(); break;
             case Menus::BtnNext:   nextLevelRequested = true; break;
             case Menus::BtnMenu:   showModeSelect = false; modeComingSoon = false; goToMenu(); break;
             case Menus::BtnQuit:   window.close(); break;
@@ -429,6 +448,9 @@ static int gameMain()
                     if (key->code == sf::Keyboard::Key::Enter && !key->alt) classicRequested = true;
                     if (key->code == sf::Keyboard::Key::Escape) { showModeSelect = false; modeComingSoon = false; }
                 }
+                if (key->code == sf::Keyboard::Key::Enter && !key->alt && !enterConsumed &&
+                    showWordSlot && slot.finished() && startLock <= 0.f)
+                    onButton(Menus::BtnPlayWord);
                 if (key->code == sf::Keyboard::Key::Escape && showWordSlot) {
                     showWordSlot = false;
                     showModeSelect = true;
@@ -501,7 +523,18 @@ static int gameMain()
         eatPause += static_cast<float>(eaten.food + 3 * eaten.power) / 60.f;   // arcade: 1 frame per dot, 3 per pellet
         if (eaten.food > 0)  audio.play(Sfx::Dot);            // power pellet: ghosts turn blue
 
-        int dotsEaten = totalDots - (eatSystem.foodLeft() + eatSystem.powerLeft());
+        // Word Finding: collect the letters
+        if (wordModeActive) {
+            char got = wordMode.update(dt, player.getPosition(),
+                                       gameState == GameState::Playing && ghostFreeze <= 0.f);
+            if (got) {
+                eatSystem.addScore(100);
+                audio.play(wordMode.complete() ? Sfx::ExtraLife : Sfx::Fruit);
+            }
+        }
+
+        // the dots that became letters must not count as eaten (ghost release, fruit)
+        int dotsEaten = totalDots - (eatSystem.foodLeft() + eatSystem.powerLeft()) - eatSystem.reservedCount();
 
         if (gameState == GameState::Playing) {
             PickupResult got = pickups.update(gdt, player.getPosition(), dotsEaten);
@@ -529,7 +562,7 @@ static int gameMain()
         }
 
         // All dots and power-ups eaten: freeze, flash the maze, then start over
-        if (gameState == GameState::Playing && eatSystem.allEaten()) {
+        if (gameState == GameState::Playing && (wordModeActive ? wordMode.complete() : eatSystem.allEaten())) {
             gameState = GameState::LevelClear;
             stateTimer = 0.f;
             levelFlashStarted = false;
@@ -542,6 +575,15 @@ static int gameMain()
             loading.start();
             loading.setShowLoadingUi(false);
             gameState = GameState::Cutscene;
+        }
+
+        // Word Finding: a fresh round has just been set up, so scatter the letters
+        if (wordModeActive && wordRoundNeeded && gameState == GameState::Ready) {
+            wordRoundNeeded = false;
+            wordModeRequested = false;
+            std::string w = roundWord.empty() ? slot.randomWord() : roundWord;
+            roundWord.clear();
+            wordMode.start(w, eatSystem, {112.f, 188.f});
         }
 
         // Entering a new state
@@ -597,7 +639,8 @@ static int gameMain()
             if (stateTimer >= 3.5f && !passVisible && !nextLevelRequested) {   // flash done: show the pass screen
                 gameMap.stopFlash();
                 passVisible = true;
-                Menus::buildPass(passPanel, level, eatSystem.getScore());
+                if (wordModeActive) Menus::buildWordWin(passPanel, wordMode.word(), level, eatSystem.getScore());
+                else                Menus::buildPass(passPanel, level, eatSystem.getScore());
             }
             if (nextLevelRequested) {                                 // flash finished: restart
                 gameMap.stopFlash();
@@ -606,6 +649,7 @@ static int gameMain()
                 nextLevelRequested = false;
                 ++level;
                 enemies.markNewLevel();
+                wordRoundNeeded = true;               // Word Finding: a new word for the next level
                 cutscenePending = (level == 3);       // intermission cutscene after clearing level 2                                                      // next level, next fruit
                 pickups.setLevel(level);
 
@@ -714,7 +758,8 @@ static int gameMain()
                 Menus::buildModeSelect(modePanel, false);
                 startLock = 0.4f;
             }
-            if (classicRequested &&
+            if (classicRequested || wordModeRequested) wordModeActive = wordModeRequested;   // pick the mode
+            if ((classicRequested || wordModeRequested) &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt) &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RAlt)) {
                 // Fresh game
@@ -752,6 +797,7 @@ static int gameMain()
         gameMap.draw(window);
         eatSystem.draw(window);
         pickups.draw(window);
+        if (wordModeActive) wordMode.drawLetters(window);
         bool showEnemies = gameState == GameState::Playing || gameState == GameState::Caught ||
                            (gameState == GameState::Ready && !(firstStart && stateTimer < 1.8f));
         if (showEnemies)
@@ -763,6 +809,7 @@ static int gameMain()
         else if (gameState == GameState::Playing)                  hudPanel.draw(window);
         else if (gameState == GameState::DeathScreen)              deathPanel.draw(window);
         else if (gameState == GameState::LevelClear && passVisible) passPanel.draw(window);
+        if (wordModeActive) wordMode.drawWordBar(window);
         if (volumeToast > 0.f && !paused)
             hudPanel.drawVolumeToast(window, audio.volume() / 100.f, audio.muted());
         hud.draw(window);
