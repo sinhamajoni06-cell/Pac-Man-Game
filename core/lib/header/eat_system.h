@@ -39,6 +39,13 @@ public:
     int  powerLeft() const { return m_powerLeft; }
     bool allEaten()  const { return m_foodLeft + m_powerLeft == 0; }
 
+    // For Word Finding: letters replace some food dots
+    int  dotCount() const { return static_cast<int>(m_dots.size()); }
+    bool isFoodDot(int i) const { return !m_dots[static_cast<size_t>(i)].power && !m_dots[static_cast<size_t>(i)].eaten; }
+    sf::Vector2f dotCenterMap(int i) const { return m_dots[static_cast<size_t>(i)].center; }
+    void reserveDot(int i);                       // takes a food dot out of the game (no score)
+    int  reservedCount() const { return m_reserved; }
+
 private:
     struct Dot {
         sf::IntRect  rect;      // where the dot sits in its image (pixels)
@@ -58,6 +65,7 @@ private:
     float m_radius = 3.f;
 
     int m_score = 0, m_foodLeft = 0, m_powerLeft = 0;
+    int m_reserved = 0;
 
     float m_blinkTimer   = 0.f;
     bool  m_powerVisible = true;
