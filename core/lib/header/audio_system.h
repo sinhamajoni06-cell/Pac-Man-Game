@@ -31,7 +31,12 @@ public:
     void setPaused(bool paused);
     void toggleMute();
     bool  muted()  const { return m_muted; }
-    float volume() const { return m_volume; }               // 0..100
+    float volume() const { return m_volume; }
+
+    // Saved sound settings (volume and mute), restored on the next launch
+    void setSettingsFile(const std::string& path) { m_settingsPath = path; }
+    bool loadSettings();                         // true if a saved file was found
+    void saveSettings() const;               // 0..100
     void  changeVolume(float delta) { setVolume(m_volume + delta); }
     void setVolume(float percent);           // 0..100
 
@@ -55,6 +60,7 @@ private:
     bool  m_dotToggle = false;
     bool  m_pauseMode = false;
     bool  m_muted = false;
+    std::string m_settingsPath;
     float m_volume = 100.f;
     std::vector<std::string> m_pausedTracks;
 };
