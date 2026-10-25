@@ -4,18 +4,18 @@ The game with mixer of word finding genre!
 <div align="center">
   <img src="https://github.com/sinhamajoni06-cell/Pac-Man-Game/blob/main/main/assets/graphic/game/name.png?raw=true" alt="WORD-MAN" width="420">
   <br>
-  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.1.2">
+  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.2.0">
     <img src="https://github.com/sinhamajoni06-cell/Pac-Man-Game/blob/main/main/assets/graphic/game/logo.png?raw=true" alt="Word-Man logo" width="140">
   </a>
   <br>
-  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.1.2/Wordman_0.1.2.zip">
+  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.2.0/Wordman_0.2.0.zip">
     <img src="https://img.shields.io/badge/%E2%96%B6%20%20DOWNLOAD%20FOR%20WINDOWS-FFCC00?style=for-the-badge" alt="Download Word-Man for Windows" width="300">
   </a>
   <br><br>
   <b>Eat the dots. Dodge the ghosts. Beat the high score.</b>
   <br><br>
-  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.1.2">
-    <img src="https://img.shields.io/badge/version-0.1.2-E63946?style=flat-square" alt="Version 0.1.2">
+  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.2.0">
+    <img src="https://img.shields.io/badge/version-0.2.0-E63946?style=flat-square" alt="Version 0.1.2">
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-2979FF?style=flat-square" alt="Windows">
   <img src="https://img.shields.io/badge/made%20with-C%2B%2B%20%2B%20SFML-FFCC00?style=flat-square" alt="C++ and SFML">
