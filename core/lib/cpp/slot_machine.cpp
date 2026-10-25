@@ -64,10 +64,9 @@ char SlotMachine::letterAt(int index, int reel) const {
     return static_cast<char>('A' + h % 26);
 }
 
-void SlotMachine::start() {
+void SlotMachine::start(int letters) {
     if (m_words.empty()) return;
-    std::uniform_int_distribution<size_t> pick(0, m_words.size() - 1);
-    m_word = m_words[pick(m_rng)];
+    m_word = pickWord(letters);
     m_seed = static_cast<unsigned>(m_rng());
 
     std::uniform_real_distribution<float> startPos(0.f, 100.f);
@@ -226,8 +225,32 @@ void SlotMachine::draw(sf::RenderTarget& target) {
     }
 }
 
-std::string SlotMachine::randomWord() {
+std::string SlotMachine::randomWord(int letters) {
+    return pickWord(letters);
+}
+
+std::string SlotMachine::pickWord(int letters) {
     if (m_words.empty()) return "APPLE";
-    std::uniform_int_distribution<size_t> pick(0, m_words.size() - 1);
-    return m_words[pick(m_rng)];
+
+    // words of the wanted length (if there are none, the closest length)
+    std::vector<const std::string*> pool;
+    int bestDiff = 1000;
+    for (const std::string& w : m_words) {
+        int d = 0;
+        if (letters > 0) {
+            d = static_cast<int>(w.size()) - letters;
+            if (d < 0) d = -d;
+        }
+        if (d < bestDiff) { bestDiff = d; pool.clear(); }
+        if (d == bestDiff) pool.push_back(&w);
+    }
+
+    // not the same word twice in a row (when there is a choice)
+    if (pool.size() > 1)
+        pool.erase(std::remove_if(pool.begin(), pool.end(),
+                                  [&](const std::string* w) { return *w == m_word; }),
+                   pool.end());
+
+    std::uniform_int_distribution<size_t> pick(0, pool.size() - 1);
+    return *pool[pick(m_rng)];
 }
