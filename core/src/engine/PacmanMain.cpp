@@ -202,8 +202,8 @@ static int gameMain()
     // Menu screens (buttons are clickable with the mouse)
     if (!Panel::loadFont("main/assets/TxT/PressStart2P-Regular.ttf"))
         return 1;
-    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel, modePanel, slotPanel;
-    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel, &modePanel, &slotPanel})
+    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel, modePanel, slotPanel, spinPanel;
+    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel, &modePanel, &slotPanel, &spinPanel})
         p->setTransform(gameMap.getPosition(), gameMap.getScale());
     Menus::buildTitle(titlePanel);
     Menus::buildHudButtons(hudPanel);
@@ -222,7 +222,11 @@ static int gameMain()
     bool        wordModeActive = false;       // the current game is Word Finding
     bool        wordModeRequested = false;    // PLAY was pressed on the slot screen
     bool        wordRoundNeeded = false;      // scatter new letters when the round is ready
-    std::string roundWord;                    // word for the next round ("" = pick a random one)        // the slot machine screen is showing
+    std::string roundWord;
+    bool        wantSpin = false;             // show the spin before the next word
+    bool        skipSpin = false;             // BACK / Enter / Space / Esc skips the spin
+    float       spinDoneTimer = 0.f;          // how long the finished word has been showing
+    auto wordLength = [](int lvl) { return std::min(10, 4 + lvl); };   // level 1 = 5 letters ... level 6+ = 10                    // word for the next round ("" = pick a random one)        // the slot machine screen is showing
 
     // Sound settings from the last run (volume and mute)
     audio.setSettingsFile("main/Data/User_data/sound_settings.txt");
@@ -235,7 +239,7 @@ static int gameMain()
     sf::Clock clock;
 
     // Playing -> Caught (freeze) -> Dying (animation) -> Respawn (pause) -> Playing
-    enum class GameState { Loading, Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title, DeathScreen, Cutscene };
+    enum class GameState { Loading, Playing, Caught, Dying, Respawn, LevelClear, Ready, GameOver, Title, DeathScreen, Cutscene, WordSpin };
     GameState gameState = GameState::Loading;
     float stateTimer = 0.f;
     int   lives = 3;
@@ -303,6 +307,9 @@ static int gameMain()
                 Menus::buildModeSelect(modePanel, false);
                 startLock = 0.4f;                      // the same key press must not also pick a mode
                 break;
+            case Menus::BtnSkip:
+                skipSpin = true;
+                break;
             case Menus::BtnPlayWord:
                 if (slot.finished()) {
                     roundWord = slot.word();
@@ -313,7 +320,7 @@ static int gameMain()
                 }
                 break;
             case Menus::BtnSpin:
-                slot.start();
+                slot.start(wordLength(1));
                 Menus::buildWordSlot(slotPanel, false, 0);
                 break;
             case Menus::BtnClassic:
@@ -326,7 +333,7 @@ static int gameMain()
                 slot.start();
                 Menus::buildWordSlot(slotPanel, false, 0);
                 break;
-            case Menus::BtnRetry:  wordRoundNeeded = true; startNewGame(); break;
+            case Menus::BtnRetry:  wantSpin = wordModeActive; wordRoundNeeded = true; startNewGame(); break;
             case Menus::BtnNext:   nextLevelRequested = true; break;
             case Menus::BtnMenu:   showModeSelect = false; modeComingSoon = false; goToMenu(); break;
             case Menus::BtnQuit:   window.close(); break;
@@ -355,6 +362,7 @@ static int gameMain()
         if (paused) return &pausePanel;
         switch (gameState) {
             case GameState::Title:       return showWordSlot ? &slotPanel : (showModeSelect ? &modePanel : (showInfo ? &infoPanel : &titlePanel));
+            case GameState::WordSpin:    return &spinPanel;
             case GameState::Playing:     return &hudPanel;
             case GameState::DeathScreen: return &deathPanel;
             case GameState::LevelClear:  return passVisible ? &passPanel : nullptr;
@@ -405,6 +413,11 @@ static int gameMain()
                 window.close();
 
             if (const auto* key = event->getIf<sf::Event::KeyPressed>()) {
+                if (gameState == GameState::WordSpin &&
+                    (key->code == sf::Keyboard::Key::Enter || key->code == sf::Keyboard::Key::Space ||
+                     key->code == sf::Keyboard::Key::Escape))
+                    skipSpin = true;
+
                 // Menu keys: arrows move the highlight, Enter uses it
                 bool enterConsumed = false;
                 {
@@ -577,6 +590,20 @@ static int gameMain()
             gameState = GameState::Cutscene;
         }
 
+        // Word Finding: show the spin animation before every new word (next level or retry)
+        if (wordModeActive && wantSpin && gameState == GameState::Ready) {
+            wantSpin = false;
+            skipSpin = false;
+            spinDoneTimer = 0.f;
+            audio.stopAll();
+            slot.start(wordLength(level));            // level 1 = 5 letters, +1 per level, max 10
+            roundWord = slot.word();
+            wordRoundNeeded = true;                   // the letters are scattered when READY! begins
+            Menus::buildWordSpin(spinPanel, false, 0, level);
+            gameState = GameState::WordSpin;
+            stateTimer = 0.f;
+        }
+
         // Word Finding: a fresh round has just been set up, so scatter the letters
         if (wordModeActive && wordRoundNeeded && gameState == GameState::Ready) {
             wordRoundNeeded = false;
@@ -650,6 +677,7 @@ static int gameMain()
                 ++level;
                 enemies.markNewLevel();
                 wordRoundNeeded = true;               // Word Finding: a new word for the next level
+                wantSpin = wordModeActive;
                 cutscenePending = (level == 3);       // intermission cutscene after clearing level 2                                                      // next level, next fruit
                 pickups.setLevel(level);
 
@@ -708,6 +736,31 @@ static int gameMain()
         hud.update(dt);
 
         window.clear(sf::Color::Black);
+
+        if (gameState == GameState::WordSpin) {
+            int stoppedBefore = slot.stoppedReels();
+            bool wasFinished = slot.finished();
+            slot.update(dt);
+            if (slot.stoppedReels() > stoppedBefore) audio.play(Sfx::Dot);     // tick when a reel stops
+            if (!wasFinished && slot.finished()) {
+                audio.play(Sfx::Fruit);                                         // word found
+                Menus::buildWordSpin(spinPanel, true, static_cast<int>(slot.word().size()), level);
+            }
+            if (slot.finished()) spinDoneTimer += dt;
+
+            if (skipSpin || spinDoneTimer >= 1.6f) {              // finished or skipped: start the round
+                skipSpin = false;
+                stateTimer = 0.f;
+                gameState = GameState::Ready;                     // continues below: READY!, then play
+                if (firstStart) audio.play(Sfx::GameStart);       // after a Retry the intro jingle plays now
+            } else {
+                slot.draw(window);
+                spinPanel.draw(window);
+                hud.draw(window);
+                window.display();
+                continue;
+            }
+        }
 
         if (gameState == GameState::Cutscene) {
             loading.update(dt);
