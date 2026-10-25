@@ -6,8 +6,15 @@
 
 #include "eat_system.h"
 
-// Word Finding mode: the letters of the chosen word replace some food dots.
-// Pac-Man collects them (any order) to win the round.
+// What the player just picked up
+struct WordPickup {
+    char letter = 0;                // 0 = nothing collected
+    bool decoy  = false;            // a wrong letter (costs points)
+    sf::Vector2f pos{0.f, 0.f};     // where it was (map pixels)
+};
+
+// Word Finding mode: the letters of the chosen word replace some food dots,
+// plus a few wrong letters. Pac-Man collects the real ones (any order) to win.
 class WordMode {
 public:
     WordMode() = default;
@@ -18,21 +25,24 @@ public:
     void setTransform(sf::Vector2f origin, float scale) { m_origin = origin; m_scale = scale; }
 
     // Starts a round. Call right after eatSystem.reset(): takes one food dot per letter.
-    void start(const std::string& word, EatSystem& eat, sf::Vector2f avoidMapPos);
+    // decoys = number of wrong letters mixed in.
+    void start(const std::string& word, EatSystem& eat, sf::Vector2f avoidMapPos, int decoys = 0);
 
-    // Returns the letter collected this frame (0 = none)
-    char update(float dt, sf::Vector2f playerWindowPos, bool canCollect);
+    // Returns what was collected this frame (letter == 0 means nothing)
+    WordPickup update(float dt, sf::Vector2f playerWindowPos, bool canCollect);
 
     void drawLetters(sf::RenderTarget& target);             // the letters in the maze
     void drawWordBar(sf::RenderTarget& target);             // the word at the top of the window
 
-    bool complete() const { return !m_letters.empty() && m_collected == static_cast<int>(m_letters.size()); }
+    bool complete() const { return m_realTotal > 0 && m_collected == m_realTotal; }
     const std::string& word() const { return m_word; }
-    int  collected() const { return m_collected; }
-    int  total() const { return static_cast<int>(m_letters.size()); }
+    int   collected() const { return m_collected; }
+    int   total() const { return m_realTotal; }
+    float playTime() const { return m_playTime; }           // seconds spent collecting
+    int   timeBonus() const;                                // points for finishing fast
 
 private:
-    struct Letter { char c; sf::Vector2f pos; bool taken = false; };
+    struct Letter { char c = 0; bool decoy = false; sf::Vector2f pos{0.f, 0.f}; bool taken = false; };
 
     void drawChar(sf::RenderTarget& target, char c, sf::Vector2f mapPos, sf::Color color);
 
@@ -45,10 +55,12 @@ private:
     std::vector<bool> m_filled;
     std::vector<Letter> m_letters;
     int   m_collected = 0;
+    int   m_realTotal = 0;
 
     sf::Vector2f m_origin{0.f, 0.f};
     float m_scale = 1.f;
     float m_time = 0.f;
+    float m_playTime = 0.f;
     float m_doneTime = 0.f;
     std::mt19937 m_rng{std::random_device{}()};
 };
