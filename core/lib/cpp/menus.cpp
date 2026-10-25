@@ -65,25 +65,26 @@ void Menus::buildPass(Panel& p, int level, int score) {
 void Menus::buildInfo(Panel& p) {
     p.clear();
     p.setDim(235);
-    p.addText("HOW TO PLAY",                  {112.f, 22.f},  kYellow);
+    p.addText("HOW TO PLAY",                  {112.f, 18.f},  kYellow);
 
-    p.addText("MOVE: ARROWS / WASD",          {112.f, 42.f},  kWhite);
-    p.addText("GAMEPAD: STICK / D-PAD",       {112.f, 54.f},  kWhite);
-    p.addText("PAUSE: P OR ESC",              {112.f, 66.f},  kWhite);
-    p.addText("MUTE: M",                      {112.f, 78.f},  kWhite);
-    p.addText("VOLUME: - / = / WHEEL",        {112.f, 90.f},  kWhite);
-    p.addText("FULLSCREEN: F11/ALT+ENTER",    {112.f, 102.f}, kWhite);
-    p.addText("MENUS: ARROWS + ENTER",        {112.f, 114.f}, kWhite);
-    p.addText("MOUSE: CLICK BUTTONS",         {112.f, 126.f}, kWhite);
+    p.addText("MOVE: ARROWS / WASD",          {112.f, 36.f},  kWhite);
+    p.addText("GAMEPAD: STICK / D-PAD",       {112.f, 48.f},  kWhite);
+    p.addText("PAUSE: P OR ESC",              {112.f, 60.f},  kWhite);
+    p.addText("MUTE: M",                      {112.f, 72.f},  kWhite);
+    p.addText("VOLUME: - / = / WHEEL",        {112.f, 84.f},  kWhite);
+    p.addText("FULLSCREEN: F11/ALT+ENTER",    {112.f, 96.f},  kWhite);
+    p.addText("MENUS: ARROWS + ENTER",        {112.f, 108.f}, kWhite);
+    p.addText("MOUSE: CLICK BUTTONS",         {112.f, 120.f}, kWhite);
 
-    p.addText("EAT ALL THE DOTS",             {112.f, 148.f}, kCyan);
-    p.addText("POWER PELLETS LET YOU",        {112.f, 160.f}, kCyan);
-    p.addText("EAT THE GHOSTS",               {112.f, 172.f}, kCyan);
+    p.addText("CLASSIC: EAT ALL DOTS",        {112.f, 140.f}, kCyan);
+    p.addText("WORD MODE: COLLECT THE",       {112.f, 152.f}, kCyan);
+    p.addText("LETTERS, FAST = BONUS",        {112.f, 164.f}, kCyan);
+    p.addText("WRONG LETTER = -50 PTS",       {112.f, 176.f}, kCyan);
 
-    p.addText(std::string("WORD-MAN  V") + WORDMAN_VERSION, {112.f, 190.f}, kYellow);
-    p.addText("FONT: PRESS START 2P",         {112.f, 204.f}, kWhite, 6.f);
-    p.addText("FAN-MADE PROJECT",             {112.f, 214.f}, kWhite, 6.f);
-    p.addText("NOT AFFILIATED WITH BANDAI NAMCO", {112.f, 224.f}, kWhite, 6.f);
+    p.addText(std::string("WORD-MAN  V") + WORDMAN_VERSION, {112.f, 194.f}, kYellow);
+    p.addText("FONT: PRESS START 2P",         {112.f, 206.f}, kWhite, 6.f);
+    p.addText("FAN-MADE PROJECT",             {112.f, 216.f}, kWhite, 6.f);
+    p.addText("NOT AFFILIATED WITH BANDAI NAMCO", {112.f, 226.f}, kWhite, 6.f);
 
     p.addButton(BtnBack, "BACK", {112.f, 242.f}, {64.f, 14.f});
 }
@@ -97,7 +98,7 @@ void Menus::buildModeSelect(Panel& p, bool comingSoon) {
 
     p.addButton(BtnWordMode, "WORD FINDING", {112.f, 150.f}, {120.f, 18.f});
     if (comingSoon) p.addText("COMING SOON!", {112.f, 170.f}, kRed, 8.f);
-    else            p.addText("A NEW WAY TO PLAY", {112.f, 168.f}, kCyan, 6.f);
+    else            p.addText("COLLECT THE SECRET WORD", {112.f, 168.f}, kCyan, 6.f);
 
     p.addButton(BtnBack, "BACK", {112.f, 214.f}, {64.f, 14.f});
 }
@@ -115,16 +116,23 @@ void Menus::buildWordSlot(Panel& p, bool finished, int letters) {
     }
 }
 
-void Menus::buildWordWin(Panel& p, const std::string& word, int level, int score) {
+void Menus::buildWordWin(Panel& p, const std::string& word, int level, int score, float seconds, int bonus) {
     p.clear();
     p.setDim(215);
-    p.addText("WORD FOUND!", {112.f, 56.f}, kYellow, 16.f);
-    p.addText(word, {112.f, 90.f}, kCyan, 16.f);
-    p.addText("LEVEL " + std::to_string(level), {112.f, 116.f}, kOrange);
-    p.addText("SCORE", {112.f, 136.f}, kCyan);
-    p.addText(std::to_string(score), {112.f, 148.f}, kWhite);
-    p.addButton(BtnNext, "NEXT WORD", {112.f, 182.f}, kBtn);
-    p.addButton(BtnMenu, "MENU",      {112.f, 206.f}, kBtn);
+
+    int total = static_cast<int>(seconds);
+    std::string timeText = std::to_string(total / 60) + ":" + (total % 60 < 10 ? "0" : "") + std::to_string(total % 60);
+
+    p.addText("WORD FOUND!", {112.f, 50.f}, kYellow, 16.f);
+    p.addText(word,          {112.f, 80.f}, kCyan,   16.f);
+    p.addText("LEVEL " + std::to_string(level), {112.f, 104.f}, kOrange);
+    p.addText("TIME " + timeText,               {112.f, 122.f}, kWhite);
+    if (bonus > 0) p.addText("TIME BONUS +" + std::to_string(bonus), {112.f, 134.f}, kYellow);
+    else           p.addText("NO TIME BONUS",                          {112.f, 134.f}, kWhite);
+    p.addText("SCORE", {112.f, 154.f}, kCyan);
+    p.addText(std::to_string(score), {112.f, 166.f}, kWhite);
+    p.addButton(BtnNext, "NEXT WORD", {112.f, 194.f}, kBtn);
+    p.addButton(BtnMenu, "MENU",      {112.f, 216.f}, kBtn);
 }
 
 void Menus::buildWordSpin(Panel& p, bool finished, int letters, int level) {
