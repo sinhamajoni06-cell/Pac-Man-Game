@@ -126,3 +126,11 @@ void Menus::buildWordWin(Panel& p, const std::string& word, int level, int score
     p.addButton(BtnNext, "NEXT WORD", {112.f, 182.f}, kBtn);
     p.addButton(BtnMenu, "MENU",      {112.f, 206.f}, kBtn);
 }
+
+void Menus::buildWordSpin(Panel& p, bool finished, int letters, int level) {
+    p.clear();
+    p.addText("LEVEL " + std::to_string(level), {112.f, 76.f}, kOrange);
+    if (finished) p.addText("YOUR WORD HAS " + std::to_string(letters) + " LETTERS", {112.f, 168.f}, kCyan);
+    else          p.addText("SPINNING...", {112.f, 168.f}, kYellow);
+    p.addButton(BtnSkip, "BACK", {112.f, 200.f}, {64.f, 14.f});     // skips the animation
+}
