@@ -39,7 +39,7 @@ The game with mixer of word finding genre!
 <table>
   <tr>
     <td align="left"><b>Source Code</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game"><code>Pac-Man-Game.zip</code></a>)</td>
-    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/archive/refs/heads/main.zip">Download</a></td>
+    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/archive/refs/heads/Backup--v-0.2.0.zip">Download</a></td>
   </tr>
   </tr>
     <td align="left"><b>Word-Man(v0.1.2)</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.1.2"><code>Word-Man.zip</code></a>)</td>
