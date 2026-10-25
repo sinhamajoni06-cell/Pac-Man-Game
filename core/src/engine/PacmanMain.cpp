@@ -223,6 +223,12 @@ static int gameMain()
     bool        wordModeRequested = false;    // PLAY was pressed on the slot screen
     bool        wordRoundNeeded = false;      // scatter new letters when the round is ready
     std::string roundWord;
+    int  wordBonus = 0;               // time bonus for the word that was just found
+    auto decoyCount = [](int lvl) { return std::min(5, std::max(0, lvl - 1)); };   // wrong letters: 0 on level 1 ... 5
+    auto highScorePath = [&]() -> std::string {                                   // each mode has its own high score
+        return wordModeActive ? "main/Data/User_data/highscore_word.txt"
+                              : "main/assets/TxT/highscore.txt";
+    };
     bool        wantSpin = false;             // show the spin before the next word
     bool        skipSpin = false;             // BACK / Enter / Space / Esc skips the spin
     float       spinDoneTimer = 0.f;          // how long the finished word has been showing
@@ -274,7 +280,7 @@ static int gameMain()
     };
 
     auto goToMenu = [&]() {
-        hud.saveHighScore("main/assets/TxT/highscore.txt");
+        hud.saveHighScore(highScorePath());
         audio.stopAll();
         gameMap.stopFlash();
         paused = false;
@@ -538,11 +544,19 @@ static int gameMain()
 
         // Word Finding: collect the letters
         if (wordModeActive) {
-            char got = wordMode.update(dt, player.getPosition(),
-                                       gameState == GameState::Playing && ghostFreeze <= 0.f);
-            if (got) {
-                eatSystem.addScore(100);
-                audio.play(wordMode.complete() ? Sfx::ExtraLife : Sfx::Fruit);
+            WordPickup got = wordMode.update(dt, player.getPosition(),
+                                             gameState == GameState::Playing && ghostFreeze <= 0.f);
+            if (got.letter) {
+                if (got.decoy) {                                   // wrong letter: lose points
+                    int penalty = std::min(50, eatSystem.getScore());
+                    eatSystem.addScore(-penalty);
+                    audio.play(Sfx::Dot);
+                    hud.addPopup("-50", got.pos, 1.0f);
+                } else {
+                    eatSystem.addScore(100);
+                    audio.play(wordMode.complete() ? Sfx::ExtraLife : Sfx::Fruit);
+                    hud.addPopup("+100", got.pos, 1.0f);
+                }
             }
         }
 
@@ -577,6 +591,10 @@ static int gameMain()
         // All dots and power-ups eaten: freeze, flash the maze, then start over
         if (gameState == GameState::Playing && (wordModeActive ? wordMode.complete() : eatSystem.allEaten())) {
             gameState = GameState::LevelClear;
+            if (wordModeActive) {                              // faster word = bigger bonus
+                wordBonus = wordMode.timeBonus();
+                eatSystem.addScore(wordBonus);
+            }
             stateTimer = 0.f;
             levelFlashStarted = false;
         }
@@ -610,7 +628,7 @@ static int gameMain()
             wordModeRequested = false;
             std::string w = roundWord.empty() ? slot.randomWord() : roundWord;
             roundWord.clear();
-            wordMode.start(w, eatSystem, {112.f, 188.f});
+            wordMode.start(w, eatSystem, {112.f, 188.f}, decoyCount(level));
         }
 
         // Entering a new state
@@ -630,7 +648,7 @@ static int gameMain()
         // After "GAME OVER" has shown on the maze for 3 seconds: the death screen
         if (gameState == GameState::GameOver && stateTimer >= 3.0f) {
             hud.setScore(eatSystem.getScore());          // makes sure a new high score counts
-            hud.saveHighScore("main/assets/TxT/highscore.txt");
+            hud.saveHighScore(highScorePath());
             Menus::buildDeath(deathPanel, eatSystem.getScore(), hud.highScore(), level);
             gameState = GameState::DeathScreen;
             stateTimer = 0.f;
@@ -638,7 +656,7 @@ static int gameMain()
 
         // After GAME OVER the game returns to the home page
         if (gameState == GameState::GameOver && stateTimer >= 4.0f) {
-            hud.saveHighScore("main/assets/TxT/highscore.txt");
+            hud.saveHighScore(highScorePath());
             title.reset();
             gameState = GameState::Title;
             stateTimer = 0.f;
@@ -646,7 +664,7 @@ static int gameMain()
 
         // GAME OVER for 4 seconds, then a new game
         if (gameState == GameState::GameOver && stateTimer >= 4.0f) {
-            hud.saveHighScore("main/assets/TxT/highscore.txt");
+            hud.saveHighScore(highScorePath());
             eatSystem.reset();                     // dots back, score 0
             lives = 3;
             enemies.reset();
@@ -666,7 +684,8 @@ static int gameMain()
             if (stateTimer >= 3.5f && !passVisible && !nextLevelRequested) {   // flash done: show the pass screen
                 gameMap.stopFlash();
                 passVisible = true;
-                if (wordModeActive) Menus::buildWordWin(passPanel, wordMode.word(), level, eatSystem.getScore());
+                if (wordModeActive) Menus::buildWordWin(passPanel, wordMode.word(), level, eatSystem.getScore(),
+                                    wordMode.playTime(), wordBonus);
                 else                Menus::buildPass(passPanel, level, eatSystem.getScore());
             }
             if (nextLevelRequested) {                                 // flash finished: restart
@@ -811,7 +830,7 @@ static int gameMain()
                 Menus::buildModeSelect(modePanel, false);
                 startLock = 0.4f;
             }
-            if (classicRequested || wordModeRequested) wordModeActive = wordModeRequested;   // pick the mode
+            if (classicRequested || wordModeRequested) { wordModeActive = wordModeRequested; hud.setHighScore(0); hud.loadHighScore(highScorePath()); }   // pick the mode
             if ((classicRequested || wordModeRequested) &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt) &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RAlt)) {
@@ -868,7 +887,7 @@ static int gameMain()
         hud.draw(window);
         window.display();
     }
-    hud.saveHighScore("main/assets/TxT/highscore.txt");
+    hud.saveHighScore(highScorePath());
     {
         std::ofstream s("main/assets/TxT/settings.txt");
         if (s) s << (autoFullscreen ? 1 : 0) << "\n";
