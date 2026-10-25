@@ -66,14 +66,17 @@ The game with mixer of word finding genre!
 # File structure-
 ```
 Pacman-project/
-├── build.bat                      # build and launch script (builds Wordman.exe)
-├── Pacman/                        # build output (Wordman.exe, DLLs, copied assets, error.log)
+├── build.bat                      # build and launch script (builds Wordman.exe, copies assets and Data)
 ├── main/
+│   ├── Data/
+│   │   ├── word.txt                   # 50 words for Word Finding, 5 to 10 letters, sorted by length
+│   │   └── User_data/
+│   │       └── sound_settings.txt     # created by the game (saved volume and mute)
 │   └── assets/
 │       ├── audio/
 │       │   └── SFX/
 │       │       ├── game_start.mp3     # intro jingle
-│       │       ├── dot_1.mp3          # waka-waka (alternates with dot_2)
+│       │       ├── dot_1.mp3          # waka-waka (alternates with dot_2), also the reel tick
 │       │       ├── dot_2.mp3
 │       │       ├── siren_1.mp3        # background siren (faster as dots run out)
 │       │       ├── siren_2.mp3
@@ -81,18 +84,17 @@ Pacman-project/
 │       │       ├── power_up.mp3       # loop while ghosts are blue
 │       │       ├── eyes.mp3           # loop while eaten ghosts run home
 │       │       ├── eat_ghost.mp3
-│       │       ├── fruit.mp3
+│       │       ├── fruit.mp3          # also plays when the slot machine finds a word
 │       │       ├── death.mp3
-│       │       ├── extra_life.mp3
+│       │       ├── extra_life.mp3     # also plays when the last letter is found
 │       │       ├── pause.mp3
 │       │       └── pause_beat.mp3
 │       ├── TxT/
-│       │   ├── PressStart2P-Regular.ttf   # arcade font (HUD, menus, loading text)
+│       │   ├── PressStart2P-Regular.ttf   # arcade font (HUD, menus, loading text, collected letters)
 │       │   ├── highscore.txt              # created by the game (best score)
-│       │   ├── volume.txt                 # created by the game (saved volume)
 │       │   ├── settings.txt               # created by the game (fullscreen choice)
 │       │   └── name/
-│       │       ├── crackman.ttf           # logo fonts for the "WORD-MAN" title
+│       │       ├── crackman.ttf           # logo fonts: "WORD-MAN" title and the slot machine letters
 │       │       ├── crackman front.ttf
 │       │       └── crackman back.ttf
 │       └── graphic/
@@ -149,14 +151,16 @@ Pacman-project/
     │   │   ├── player.h             # Pac-Man movement, input, GIF animation, death animation
     │   │   ├── map.h                # map drawing, level-clear flash
     │   │   ├── map_box.h            # wall hitbox, lane movement, tunnel teleport
-    │   │   ├── eat_system.h         # eating dots, power-up blinking, score
+    │   │   ├── eat_system.h         # eating dots, power-up blinking, score, dots taken for letters
     │   │   ├── pickup_system.h      # bonus fruit and the level indicator
     │   │   ├── hud.h                # 1UP, score, HIGH SCORE, READY!, GAME OVER, life icons
     │   │   ├── title_screen.h       # home page: WORD-MAN logo, character list
     │   │   ├── loading_animation.h  # start-up chase scene, loading text and bar, cutscene
-    │   │   ├── ui_panel.h           # menu screens: buttons, slider, volume popup
-    │   │   ├── menus.h              # title, pause, death, pass and info screens
-    │   │   ├── audio_system.h       # global sound system (Audio::get())
+    │   │   ├── ui_panel.h           # menu screens: buttons, slider, volume popup, key navigation
+    │   │   ├── menus.h              # title, mode select, slot, word win, pause, death, pass and info screens
+    │   │   ├── slot_machine.h       # slot machine that picks the word (Crackman letters)
+    │   │   ├── word_mode.h          # Word Finding: letters in the maze, word at the top, win check
+    │   │   ├── audio_system.h       # global sound system (Audio::get()), saved sound settings
     │   │   ├── level_config.h       # difficulty per level (speeds, scared time, timing)
     │   │   ├── version.h            # version number for the INFO screen
     │   │   ├── stb_image.h          # GIF decoder (third-party, single header)
@@ -182,6 +186,8 @@ Pacman-project/
     │       ├── loading_animation.cpp
     │       ├── ui_panel.cpp
     │       ├── menus.cpp
+    │       ├── slot_machine.cpp
+    │       ├── word_mode.cpp
     │       ├── audio_system.cpp
     │       └── enemy/
     │           ├── gif_animation.cpp
@@ -193,5 +199,5 @@ Pacman-project/
     │           └── enemy_manager.cpp
     └── src/
         └── engine/
-            └── PacmanMain.cpp     # main(): game loop, states, input, error log and fullscreen
+            └── PacmanMain.cpp     # main(): game loop, states (Classic and Word Finding), input, error log, fullscreen
 ```
