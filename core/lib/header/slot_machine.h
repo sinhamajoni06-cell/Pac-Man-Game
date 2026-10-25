@@ -16,7 +16,7 @@ public:
     bool load(const std::string& assetRoot, const std::string& wordFile);
     void setTransform(sf::Vector2f origin, float scale) { m_origin = origin; m_scale = scale; }
 
-    void start();                         // picks a random word and starts spinning
+    void start(int letters = 0);      // letters = 0 picks any length                         // picks a random word and starts spinning
     void update(float dt);
     void draw(sf::RenderTarget& target);
 
@@ -24,7 +24,7 @@ public:
     bool finished() const { return m_started && m_finished; }
     int  stoppedReels() const;
     const std::string& word() const { return m_word; }
-    std::string randomWord();                           // a random word from word.txt (for the next rounds)   // the chosen word, uppercase
+    std::string randomWord(int letters = 0);                           // a random word from word.txt (for the next rounds)   // the chosen word, uppercase
 
 private:
     struct Reel {
@@ -38,6 +38,7 @@ private:
         bool  stopped = false;
     };
 
+    std::string pickWord(int letters);      // a word of exactly that length (or the closest one)
     char letterAt(int index, int reel) const;
     void drawGlyphs(sf::RenderTarget& t, const std::string& s, sf::Vector2f centerMap,
                     float capHeightMap, float maxWidthMap, sf::Color color);
