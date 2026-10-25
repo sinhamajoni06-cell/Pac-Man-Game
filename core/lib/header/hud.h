@@ -29,6 +29,7 @@ public:
     void loadHighScore(const std::string& path);
     void saveHighScore(const std::string& path) const;
     int  highScore() const { return m_high; }
+    void setHighScore(int v) { m_high = v; }
 
     void update(float dt);
     void draw(sf::RenderTarget& target);
