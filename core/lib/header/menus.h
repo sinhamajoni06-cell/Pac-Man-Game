@@ -13,6 +13,6 @@ void buildPass(Panel& p, int level, int score);
 void buildModeSelect(Panel& p, bool comingSoon);             // Classic / Word Finding
 void buildWordSlot(Panel& p, bool finished, int letters);
 void buildWordSpin(Panel& p, bool finished, int letters, int level);   // in-game spin: only BACK
-void buildWordWin(Panel& p, const std::string& word, int level, int score);   // "WORD FOUND!" screen   // text and buttons under the slot machine
+void buildWordWin(Panel& p, const std::string& word, int level, int score, float seconds, int bonus);   // "WORD FOUND!" screen   // text and buttons under the slot machine
 void buildInfo(Panel& p);                                    // controls and credits
 }
