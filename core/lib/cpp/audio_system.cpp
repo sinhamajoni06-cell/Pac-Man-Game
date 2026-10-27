@@ -166,8 +166,9 @@ void Audio::applyVolume() {
     sf::Listener::setGlobalVolume(m_muted ? 0.f : m_volume);
 }
 
-void Audio::setVolume(float percent) {
+void Audio::setVolume(float percent, bool save) {
     m_volume = std::clamp(percent, 0.f, 100.f);
+    if (!save) { applyVolume(); return; }
     saveSettings();
     applyVolume();
 }
