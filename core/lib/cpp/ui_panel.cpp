@@ -134,6 +134,9 @@ void Panel::draw(sf::RenderTarget& target) {
                  (b.id == m_focusId) ? kYellow : kLavender, 1.f);
         drawText(target, b.label, b.rect.position + b.rect.size / 2.f,
                  (b.id == m_focusId) ? kYellow : sf::Color::White, b.textSize, Align::Center);
+        if (b.icon == Icon::Gear)
+            drawGear(target, b.rect.position + b.rect.size / 2.f,
+                     (b.id == m_focusId) ? kYellow : sf::Color::White);
     }
 
     if (m_slider.active) {
@@ -185,4 +188,48 @@ int Panel::focusedId() const {
     for (const ButtonItem& b : m_buttons)
         if (b.id == m_focusId) return m_focusId;
     return 0;
+}
+
+void Panel::addIconButton(int id, Icon icon, sf::Vector2f center, sf::Vector2f size) {
+    addButton(id, "", center, size);                  // no label, the icon is the picture
+    m_buttons.back().icon = icon;
+}
+
+// A 9x9 pixel-art gear (1 map pixel per square), drawn as one batch of triangles
+void Panel::drawGear(sf::RenderTarget& t, sf::Vector2f center, sf::Color color) {
+    static const char* kGear[9] = {
+        "...XXX...",
+        ".X.XXX.X.",
+        "..XXXXX..",
+        "XXX...XXX",
+        "XXX...XXX",
+        "XXX...XXX",
+        "..XXXXX..",
+        ".X.XXX.X.",
+        "...XXX..."
+    };
+
+    // Corner positions are computed once, so neighbouring squares share exact edges (no gaps)
+    float xs[10], ys[10];
+    for (int i = 0; i < 10; ++i) {
+        xs[i] = m_origin.x + (center.x - 4.5f + static_cast<float>(i)) * m_scale;
+        ys[i] = m_origin.y + (center.y - 4.5f + static_cast<float>(i)) * m_scale;
+    }
+
+    std::vector<sf::Vertex> v;
+    auto add = [&](float x, float y) {
+        sf::Vertex p;
+        p.position = {x, y};
+        p.color = color;
+        v.push_back(p);
+    };
+
+    for (int r = 0; r < 9; ++r) {
+        for (int c = 0; c < 9; ++c) {
+            if (kGear[r][c] != 'X') continue;
+            add(xs[c], ys[r]);     add(xs[c + 1], ys[r]);     add(xs[c], ys[r + 1]);
+            add(xs[c + 1], ys[r]); add(xs[c + 1], ys[r + 1]); add(xs[c], ys[r + 1]);
+        }
+    }
+    t.draw(v.data(), v.size(), sf::PrimitiveType::Triangles);
 }
