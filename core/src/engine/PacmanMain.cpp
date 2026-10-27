@@ -17,6 +17,7 @@
 #include "ui_panel.h"
 #include "menus.h"
 #include "slot_machine.h"
+#include <filesystem>
 #include "word_mode.h"
 #include <iostream>
 #include <sstream>
@@ -96,6 +97,17 @@ int main()
 
 static int gameMain()
 {
+    {   // user data folder; copy saves from the old place on the first run
+        namespace fs = std::filesystem;
+        std::error_code ec;
+        fs::create_directories("main/Data/User_data", ec);
+        for (const char* name : {"highscore.txt", "settings.txt"}) {
+            fs::path oldPath = fs::path("main/assets/TxT") / name;
+            fs::path newPath = fs::path("main/Data/User_data") / name;
+            if (fs::exists(oldPath, ec) && !fs::exists(newPath, ec)) fs::copy_file(oldPath, newPath, ec);
+        }
+    }
+
     sf::RenderWindow window(sf::VideoMode({800, 600}), "Word-Man");
     window.setFramerateLimit(60);
 
@@ -156,7 +168,7 @@ static int gameMain()
     if (!hud.load("main/assets/TxT/PressStart2P-Regular.ttf"))
         return 1;
     hud.setTransform(gameMap.getPosition(), gameMap.getScale());
-    hud.loadHighScore("main/assets/TxT/highscore.txt");
+    hud.loadHighScore("main/Data/User_data/highscore.txt");
 
     TitleScreen title;
     if (!title.load("main/assets"))
@@ -202,8 +214,8 @@ static int gameMain()
     // Menu screens (buttons are clickable with the mouse)
     if (!Panel::loadFont("main/assets/TxT/PressStart2P-Regular.ttf"))
         return 1;
-    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel, modePanel, slotPanel, spinPanel, quitPanel;
-    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel, &modePanel, &slotPanel, &spinPanel, &quitPanel})
+    Panel titlePanel, hudPanel, pausePanel, deathPanel, passPanel, infoPanel, modePanel, slotPanel, spinPanel, quitPanel, settingsPanel;
+    for (Panel* p : {&titlePanel, &hudPanel, &pausePanel, &deathPanel, &passPanel, &infoPanel, &modePanel, &slotPanel, &spinPanel, &quitPanel, &settingsPanel})
         p->setTransform(gameMap.getPosition(), gameMap.getScale());
     Menus::buildTitle(titlePanel);
     Menus::buildHudButtons(hudPanel);
@@ -214,7 +226,11 @@ static int gameMain()
         return 1;
     slot.setTransform(gameMap.getPosition(), gameMap.getScale());
     bool showWordSlot = false;
-    bool showQuitConfirm = false;     // the "Do you want to exit?" screen is showing
+    bool showQuitConfirm = false;
+    bool showSettings = false;        // the settings screen (home page) is showing
+    auto refreshSettings = [&]() {    // rebuild it after the volume or mute changed
+        if (showSettings) Menus::buildSettings(settingsPanel, audio.volume() / 100.f, audio.muted());
+    };     // the "Do you want to exit?" screen is showing
 
     WordMode wordMode;
     if (!wordMode.load("main/assets/TxT/PressStart2P-Regular.ttf"))
@@ -298,12 +314,14 @@ static int gameMain()
         paused = value;
         audio.setPaused(paused);
         if (paused) Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
+        refreshSettings();
     };
 
     auto changeVolume = [&](float delta) {
         audio.changeVolume(delta);
         volumeToast = 1.5f;
         if (paused) Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
+        refreshSettings();
     };
 
     auto onButton = [&](int id) {
@@ -343,6 +361,10 @@ static int gameMain()
             case Menus::BtnRetry:  wantSpin = wordModeActive; wordRoundNeeded = true; startNewGame(); break;
             case Menus::BtnNext:   nextLevelRequested = true; break;
             case Menus::BtnMenu:   showModeSelect = false; modeComingSoon = false; goToMenu(); break;
+            case Menus::BtnSettings:
+                showSettings = true;
+                Menus::buildSettings(settingsPanel, audio.volume() / 100.f, audio.muted());
+                break;
             case Menus::BtnQuit:
                 showQuitConfirm = true;                // ask first
                 Menus::buildQuitConfirm(quitPanel);
@@ -356,13 +378,14 @@ static int gameMain()
                     modeComingSoon = false;
                     Menus::buildModeSelect(modePanel, false);
                 } else {
-                    showInfo = false; showModeSelect = false; modeComingSoon = false;
+                    showInfo = false; showModeSelect = false; modeComingSoon = false; showSettings = false;
                 }
                 break;
             case Menus::BtnPause:  if (gameState == GameState::Playing) setPausedState(true); break;
             case Menus::BtnResume: setPausedState(false); break;
             case Menus::BtnMute:
                 audio.toggleMute();
+                refreshSettings();
                 Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
                 break;
             default: break;
@@ -372,6 +395,7 @@ static int gameMain()
     // The screen that receives mouse clicks right now
     auto activePanel = [&]() -> Panel* {
         if (showQuitConfirm) return &quitPanel;
+        if (showSettings) return &settingsPanel;
         if (paused) return &pausePanel;
         switch (gameState) {
             case GameState::Title:       return showWordSlot ? &slotPanel : (showModeSelect ? &modePanel : (showInfo ? &infoPanel : &titlePanel));
@@ -399,6 +423,7 @@ static int gameMain()
         }                      // keeps running while the game is paused
         if (paused) dt = 0.f;
         if (volumeToast > 0.f) volumeToast -= realDt;
+        if (showSettings) volumeToast = 0.f;      // the settings screen shows the volume itself
         if (startLock > 0.f) startLock -= dt;
         gameMap.update(dt);   // runs the maze flash
 
@@ -441,7 +466,7 @@ static int gameMain()
                         const bool left  = key->code == NavKey::Left;
                         const bool right = key->code == NavKey::Right;
 
-                        if (paused && (left || right))
+                        if ((paused || showSettings) && (left || right))
                             changeVolume(right ? 5.f : -5.f);          // pause menu: left/right = volume
                         else if (key->code == NavKey::Up || left)
                             nav->keyNavigate(-1);
@@ -483,6 +508,7 @@ static int gameMain()
                     Menus::buildModeSelect(modePanel, false);
                 }
                 if (key->code == sf::Keyboard::Key::Escape && showQuitConfirm) showQuitConfirm = false;   // Esc = cancel
+                if (key->code == sf::Keyboard::Key::Escape && showSettings) showSettings = false;
                 if (key->code == sf::Keyboard::Key::Escape && showInfo) showInfo = false;
                 if (key->code == sf::Keyboard::Key::Escape) {
                     if (paused) setPausedState(false);
@@ -502,14 +528,14 @@ static int gameMain()
             if (const auto* moved = event->getIf<sf::Event::MouseMoved>()) {
                 if (panel) {
                     panel->mouseMoved(window.mapPixelToCoords(moved->position));
-                    if (paused && panel->sliderDragging())
+                    if ((paused || showSettings) && panel->sliderDragging())
                         audio.setVolume(panel->sliderValue() * 100.f);
                 }
             }
             if (const auto* press = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (panel && press->button == sf::Mouse::Button::Left) {
                     int id = panel->mousePressed(window.mapPixelToCoords(press->position));
-                    if (paused && panel->sliderDragging())
+                    if ((paused || showSettings) && panel->sliderDragging())
                         audio.setVolume(panel->sliderValue() * 100.f);
                     if (id > 0) onButton(id);
                 }
@@ -830,7 +856,7 @@ static int gameMain()
                     Menus::buildWordSlot(slotPanel, true, static_cast<int>(slot.word().size()));
                 }
             }
-            if (title.startRequested() && startLock <= 0.f && !showModeSelect && !showInfo && !showWordSlot && !showQuitConfirm &&
+            if (title.startRequested() && startLock <= 0.f && !showModeSelect && !showInfo && !showWordSlot && !showQuitConfirm && !showSettings &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LAlt) &&
                 !sf::Keyboard::isKeyPressed(sf::Keyboard::Key::RAlt)) {
                 showModeSelect = true;                         // choose a mode first
@@ -863,6 +889,7 @@ static int gameMain()
                 if (!showModeSelect && !showWordSlot) title.draw(window);
                 if (showWordSlot) { slot.draw(window); slotPanel.draw(window); }
                 else if (showModeSelect) modePanel.draw(window);
+                else if (showSettings) settingsPanel.draw(window);
                 else if (showInfo) infoPanel.draw(window);
                 else          titlePanel.draw(window);
                 if (volumeToast > 0.f)
@@ -899,7 +926,7 @@ static int gameMain()
     }
     hud.saveHighScore(highScorePath());
     {
-        std::ofstream s("main/assets/TxT/settings.txt");
+        std::ofstream s("main/Data/User_data/settings.txt");
         if (s) s << (autoFullscreen ? 1 : 0) << "\n";
     }
     return 0;
