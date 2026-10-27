@@ -529,18 +529,21 @@ static int gameMain()
                 if (panel) {
                     panel->mouseMoved(window.mapPixelToCoords(moved->position));
                     if ((paused || showSettings) && panel->sliderDragging())
-                        audio.setVolume(panel->sliderValue() * 100.f);
+                        audio.setVolume(panel->sliderValue() * 100.f, false);   // saved when the mouse is released
                 }
             }
             if (const auto* press = event->getIf<sf::Event::MouseButtonPressed>()) {
                 if (panel && press->button == sf::Mouse::Button::Left) {
                     int id = panel->mousePressed(window.mapPixelToCoords(press->position));
                     if ((paused || showSettings) && panel->sliderDragging())
-                        audio.setVolume(panel->sliderValue() * 100.f);
+                        audio.setVolume(panel->sliderValue() * 100.f, false);   // saved when the mouse is released
                     if (id > 0) onButton(id);
                 }
             }
             if (event->is<sf::Event::MouseButtonReleased>()) {
+                if (settingsPanel.sliderDragging() || pausePanel.sliderDragging())
+                    audio.saveSettings();                 // save once, when the slider is let go
+                settingsPanel.mouseReleased();
                 titlePanel.mouseReleased(); hudPanel.mouseReleased(); pausePanel.mouseReleased();
                 deathPanel.mouseReleased(); passPanel.mouseReleased();
             }
