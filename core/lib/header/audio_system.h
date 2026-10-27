@@ -38,7 +38,7 @@ public:
     bool loadSettings();                         // true if a saved file was found
     void saveSettings() const;               // 0..100
     void  changeVolume(float delta) { setVolume(m_volume + delta); }
-    void setVolume(float percent);           // 0..100
+    void setVolume(float percent, bool save = true);     // save = false while a slider is being dragged           // 0..100
 
 private:
     Audio() = default;
