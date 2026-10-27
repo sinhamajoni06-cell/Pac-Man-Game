@@ -17,7 +17,7 @@ void Menus::buildTitle(Panel& p) {
     p.addButton(BtnPlay, "PLAY", {40.f, 256.f}, {56.f, 14.f});
     p.addButton(BtnInfo, "INFO", {112.f, 256.f}, {56.f, 14.f});
     p.addButton(BtnQuit, "QUIT", {184.f, 256.f}, {56.f, 14.f});
-    p.addButton(BtnSettings, "SETTINGS", {188.f, -16.f}, {56.f, 12.f}, 6.f);   // where the pause button is in the game
+    p.addIconButton(BtnSettings, Panel::Icon::Gear, {204.f, -16.f}, {24.f, 12.f});   // where the pause button is in the game
 }
 
 void Menus::buildHudButtons(Panel& p) {
