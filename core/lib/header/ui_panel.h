@@ -8,6 +8,7 @@
 class Panel {
 public:
     enum class Align { Left, Center, Right };
+    enum class Icon { None, Gear };
 
     static bool loadFont(const std::string& path);      // once, shared by every panel
 
@@ -20,6 +21,7 @@ public:
     void addButton(int id, const std::string& label, sf::Vector2f center, sf::Vector2f size,
                    float textSize = 8.f);
     void setSlider(sf::Vector2f center, float width, float value01);
+    void addIconButton(int id, Icon icon, sf::Vector2f center, sf::Vector2f size);
 
     float sliderValue()    const { return m_slider.value; }      // 0..1
     bool  sliderDragging() const { return m_slider.dragging; }
@@ -39,7 +41,7 @@ public:
 
 private:
     struct TextItem   { std::string text; sf::Vector2f pos; sf::Color color; float size; Align align; };
-    struct ButtonItem { int id; std::string label; sf::FloatRect rect; bool hover = false; float textSize = 8.f; };
+    struct ButtonItem { int id; std::string label; sf::FloatRect rect; bool hover = false; float textSize = 8.f; Icon icon = Icon::None; };
     struct SliderItem { bool active = false; sf::Vector2f center; float width = 0.f;
                         float value = 0.f; bool dragging = false; };
 
@@ -49,6 +51,7 @@ private:
     void drawRect(sf::RenderTarget& t, sf::FloatRect rect, sf::Color fill,
                   sf::Color outline, float thickness);
     void setSliderFromMouse(sf::Vector2f mapPos);
+    void drawGear(sf::RenderTarget& t, sf::Vector2f center, sf::Color color);
 
     std::vector<TextItem>   m_texts;
     std::vector<ButtonItem> m_buttons;
