@@ -17,6 +17,7 @@ void Menus::buildTitle(Panel& p) {
     p.addButton(BtnPlay, "PLAY", {40.f, 256.f}, {56.f, 14.f});
     p.addButton(BtnInfo, "INFO", {112.f, 256.f}, {56.f, 14.f});
     p.addButton(BtnQuit, "QUIT", {184.f, 256.f}, {56.f, 14.f});
+    p.addButton(BtnSettings, "SETTINGS", {188.f, -16.f}, {56.f, 12.f}, 6.f);   // where the pause button is in the game
 }
 
 void Menus::buildHudButtons(Panel& p) {
@@ -152,4 +153,15 @@ void Menus::buildQuitConfirm(Panel& p) {
     // CANCEL is added first, so the arrow keys land on it first (the safe choice)
     p.addButton(BtnQuitCancel, "CANCEL", {152.f, 150.f}, {72.f, 18.f});
     p.addButton(BtnQuitYes,    "YES",    {72.f, 150.f},  {72.f, 18.f});
+}
+
+void Menus::buildSettings(Panel& p, float volume01, bool muted) {
+    p.clear();
+    p.setDim(235);
+    p.addText("SETTINGS", {112.f, 48.f},  kYellow, 16.f);
+    p.addText("SOUND",    {112.f, 82.f},  kCyan);
+    p.addText("VOLUME",   {112.f, 104.f}, kWhite);
+    p.setSlider({112.f, 120.f}, 120.f, volume01);
+    p.addButton(BtnMute, muted ? "SOUND: OFF" : "SOUND: ON", {112.f, 164.f}, kBtn);
+    p.addButton(BtnBack, "BACK", {112.f, 200.f}, kBtn);
 }
