@@ -142,3 +142,14 @@ void Menus::buildWordSpin(Panel& p, bool finished, int letters, int level) {
     else          p.addText("SPINNING...", {112.f, 168.f}, kYellow);
     p.addButton(BtnSkip, "BACK", {112.f, 200.f}, {64.f, 14.f});     // skips the animation
 }
+
+void Menus::buildQuitConfirm(Panel& p) {
+    p.clear();
+    p.setDim(240);
+    p.addText("DO YOU WANT", {112.f, 80.f},  kYellow, 16.f);
+    p.addText("TO EXIT?",    {112.f, 100.f}, kYellow, 16.f);
+
+    // CANCEL is added first, so the arrow keys land on it first (the safe choice)
+    p.addButton(BtnQuitCancel, "CANCEL", {152.f, 150.f}, {72.f, 18.f});
+    p.addButton(BtnQuitYes,    "YES",    {72.f, 150.f},  {72.f, 18.f});
+}
