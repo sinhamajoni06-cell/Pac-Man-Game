@@ -40,9 +40,10 @@ void Panel::addText(const std::string& text, sf::Vector2f mapPos, sf::Color colo
     m_texts.push_back({text, mapPos, color, size, align});
 }
 
-void Panel::addButton(int id, const std::string& label, sf::Vector2f center, sf::Vector2f size) {
+void Panel::addButton(int id, const std::string& label, sf::Vector2f center, sf::Vector2f size, float textSize) {
     ButtonItem b;
     b.id = id;
+    b.textSize = textSize;
     b.label = label;
     b.rect = sf::FloatRect({center.x - size.x / 2.f, center.y - size.y / 2.f}, size);
     m_buttons.push_back(b);
@@ -132,7 +133,7 @@ void Panel::draw(sf::RenderTarget& target) {
         drawRect(target, b.rect, (b.id == m_focusId) ? kBlue : sf::Color::Black,
                  (b.id == m_focusId) ? kYellow : kLavender, 1.f);
         drawText(target, b.label, b.rect.position + b.rect.size / 2.f,
-                 (b.id == m_focusId) ? kYellow : sf::Color::White, 8.f, Align::Center);
+                 (b.id == m_focusId) ? kYellow : sf::Color::White, b.textSize, Align::Center);
     }
 
     if (m_slider.active) {
