@@ -17,7 +17,8 @@ public:
 
     void addText(const std::string& text, sf::Vector2f mapPos, sf::Color color,
                  float size = 8.f, Align align = Align::Center);
-    void addButton(int id, const std::string& label, sf::Vector2f center, sf::Vector2f size);
+    void addButton(int id, const std::string& label, sf::Vector2f center, sf::Vector2f size,
+                   float textSize = 8.f);
     void setSlider(sf::Vector2f center, float width, float value01);
 
     float sliderValue()    const { return m_slider.value; }      // 0..1
@@ -38,7 +39,7 @@ public:
 
 private:
     struct TextItem   { std::string text; sf::Vector2f pos; sf::Color color; float size; Align align; };
-    struct ButtonItem { int id; std::string label; sf::FloatRect rect; bool hover = false; };
+    struct ButtonItem { int id; std::string label; sf::FloatRect rect; bool hover = false; float textSize = 8.f; };
     struct SliderItem { bool active = false; sf::Vector2f center; float width = 0.f;
                         float value = 0.f; bool dragging = false; };
 
