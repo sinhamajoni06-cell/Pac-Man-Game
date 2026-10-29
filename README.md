@@ -70,8 +70,7 @@ Pacman-project/
 ├── main/
 │   ├── Data/
 │   │   ├── word.txt                   # 50 words for Word Finding, 5 to 10 letters, sorted by length
-│   │   └── User_data/
-│   │       └── sound_settings.txt     # created by the game (saved volume and mute)
+│   │   └── User_data/                 # For In Game.
 │   └── assets/
 │       ├── audio/
 │       │   └── SFX/
