@@ -92,6 +92,11 @@ int main()
         if (msg.empty()) msg = "The game could not start.";
         showFatalError("The game stopped because of an error:\n\n" + msg);
     }
+    {   // nothing went wrong: do not leave an empty error.log behind
+        std::error_code ec;
+        if (std::filesystem::exists("error.log", ec) && std::filesystem::file_size("error.log", ec) == 0)
+            std::filesystem::remove("error.log", ec);
+    }
     return rc;
 }
 
