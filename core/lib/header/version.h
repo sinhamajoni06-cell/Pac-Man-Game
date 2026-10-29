@@ -1,2 +1,2 @@
 #pragma once
-#define WORDMAN_VERSION "0.2.1"
+#define WORDMAN_VERSION "0.2.2"
