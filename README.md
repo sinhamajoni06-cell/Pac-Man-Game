@@ -42,8 +42,8 @@ The game with mixer of word finding genre!
     <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/archive/refs/heads/main.zip">Download</a></td>
   </tr>
   </tr>
-    <td align="left"><b>Word-Man(v0.2.0)</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.2.0"><code>Word-Man.zip</code></a>)</td>
-    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.2.0/Wordman_0.2.0.zip">Download</a></td>
+    <td align="left"><b>Word-Man(v0.2.1)</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.2.1"><code>Word-Man.zip</code></a>)</td>
+    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.2.1/Wordman_v-0.2.1.zip">Download</a></td>
   </tr>
   </tr>
     <td align="left"><b>G++ Installation and Setup</b></td>
