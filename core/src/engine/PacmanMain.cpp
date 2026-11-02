@@ -261,6 +261,7 @@ static int gameMain()
     audio.setSettingsFile("main/Data/User_data/sound_settings.txt");
     audio.loadSettings();
 
+    float mouseIdle = 0.f;            // seconds since the mouse last moved (hides the pointer in the game)
     float ghostFreeze = 0.f;          // game freezes for a moment when a ghost is eaten
     float eatPause = 0.f;             // tiny pause after every dot
     bool  cutscenePending = false;    // play the intermission cutscene before the next level
@@ -484,6 +485,7 @@ static int gameMain()
         }                      // keeps running while the game is paused
         if (paused) dt = 0.f;
         if (volumeToast > 0.f) volumeToast -= realDt;
+        mouseIdle += realDt;
         if (showSettings) volumeToast = 0.f;      // the settings screen shows the volume itself
         if (startLock > 0.f) startLock -= dt;
         gameMap.update(dt);   // runs the maze flash
@@ -507,6 +509,9 @@ static int gameMain()
                     event->is<sf::Event::MouseButtonPressed>())
                     skipLoading = true;
             }
+
+            if (event->is<sf::Event::MouseMoved>() || event->is<sf::Event::MouseButtonPressed>())
+                mouseIdle = 0.f;
 
             if (event->is<sf::Event::Closed>())
                 window.close();
@@ -861,6 +866,17 @@ static int gameMain()
         hud.showReady(gameState == GameState::Ready);
         hud.showGameOver(gameState == GameState::GameOver);
         hud.update(dt);
+
+        // Hide the pointer while the game is running (no menu on screen);
+        // it shows again for a moment whenever the mouse moves
+        {
+            const bool menuUp = showQuitConfirm || showSettings || paused || showInfo ||
+                                showModeSelect || showWordSlot ||
+                                gameState == GameState::Title || gameState == GameState::DeathScreen ||
+                                gameState == GameState::WordSpin ||
+                                (gameState == GameState::LevelClear && passVisible);
+            window.setMouseCursorVisible(menuUp || mouseIdle < 1.0f);
+        }
 
         window.clear(sf::Color::Black);
 
