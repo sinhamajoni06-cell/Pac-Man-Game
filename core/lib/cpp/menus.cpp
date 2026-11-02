@@ -155,13 +155,20 @@ void Menus::buildQuitConfirm(Panel& p) {
     p.addButton(BtnQuitYes,    "YES",    {72.f, 150.f},  {72.f, 18.f});
 }
 
-void Menus::buildSettings(Panel& p, float volume01, bool muted) {
+void Menus::buildSettings(Panel& p, float volume01, bool muted, bool fullscreen, bool scoresCleared) {
     p.clear();
     p.setDim(235);
-    p.addText("SETTINGS", {112.f, 48.f},  kYellow, 16.f);
-    p.addText("SOUND",    {112.f, 82.f},  kCyan);
-    p.addText("VOLUME",   {112.f, 104.f}, kWhite);
-    p.setSlider({112.f, 120.f}, 120.f, volume01);
-    p.addButton(BtnMute, muted ? "SOUND: OFF" : "SOUND: ON", {112.f, 164.f}, kBtn);
-    p.addButton(BtnBack, "BACK", {112.f, 200.f}, kBtn);
+    const sf::Vector2f wide(136.f, 16.f);
+
+    p.addText("SETTINGS", {112.f, 34.f}, kYellow, 16.f);
+
+    p.addText("SOUND",  {112.f, 62.f}, kCyan);
+    p.addText("VOLUME", {112.f, 78.f}, kWhite);
+    p.setSlider({112.f, 92.f}, 120.f, volume01);
+    p.addButton(BtnMute, muted ? "SOUND: OFF" : "SOUND: ON", {112.f, 124.f}, wide);
+
+    p.addButton(BtnFullscreen, fullscreen ? "FULLSCREEN: ON" : "FULLSCREEN: OFF", {112.f, 150.f}, wide);
+    p.addButton(BtnResetScores, scoresCleared ? "SCORES RESET" : "RESET SCORES", {112.f, 176.f}, wide);
+
+    p.addButton(BtnBack, "BACK", {112.f, 208.f}, {64.f, 14.f});
 }
