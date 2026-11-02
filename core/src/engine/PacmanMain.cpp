@@ -123,7 +123,7 @@ static int gameMain()
     bool fullscreen = false;
     bool autoFullscreen = true;       // saved: stays windowed if you chose that last time
     {
-        std::ifstream f("main/assets/TxT/settings.txt");
+        std::ifstream f("main/Data/User_data/settings.txt");
         int v = 1;
         if (f >> v) autoFullscreen = (v != 0);
     }
@@ -232,9 +232,10 @@ static int gameMain()
     slot.setTransform(gameMap.getPosition(), gameMap.getScale());
     bool showWordSlot = false;
     bool showQuitConfirm = false;
-    bool showSettings = false;        // the settings screen (home page) is showing
+    bool showSettings = false;
+    bool scoresCleared = false;       // "SCORES RESET" is showing on the settings screen        // the settings screen (home page) is showing
     auto refreshSettings = [&]() {    // rebuild it after the volume or mute changed
-        if (showSettings) Menus::buildSettings(settingsPanel, audio.volume() / 100.f, audio.muted());
+        if (showSettings) Menus::buildSettings(settingsPanel, audio.volume() / 100.f, audio.muted(), fullscreen, scoresCleared);
     };     // the "Do you want to exit?" screen is showing
 
     WordMode wordMode;
@@ -249,7 +250,7 @@ static int gameMain()
     auto decoyCount = [](int lvl) { return std::min(5, std::max(0, lvl - 1)); };   // wrong letters: 0 on level 1 ... 5
     auto highScorePath = [&]() -> std::string {                                   // each mode has its own high score
         return wordModeActive ? "main/Data/User_data/highscore_word.txt"
-                              : "main/assets/TxT/highscore.txt";
+                              : "main/Data/User_data/highscore.txt";
     };
     bool        wantSpin = false;             // show the spin before the next word
     bool        skipSpin = false;             // BACK / Enter / Space / Esc skips the spin
@@ -368,12 +369,27 @@ static int gameMain()
             case Menus::BtnMenu:   showModeSelect = false; modeComingSoon = false; goToMenu(); break;
             case Menus::BtnSettings:
                 showSettings = true;
-                Menus::buildSettings(settingsPanel, audio.volume() / 100.f, audio.muted());
+                scoresCleared = false;
+                Menus::buildSettings(settingsPanel, audio.volume() / 100.f, audio.muted(), fullscreen, scoresCleared);
                 break;
             case Menus::BtnQuit:
                 showQuitConfirm = true;                // ask first
                 Menus::buildQuitConfirm(quitPanel);
                 break;
+            case Menus::BtnFullscreen:
+                setFullscreen(!fullscreen);
+                autoFullscreen = fullscreen;               // remembered for the next launch
+                refreshSettings();
+                break;
+            case Menus::BtnResetScores: {
+                std::error_code ec;
+                std::filesystem::remove("main/Data/User_data/highscore.txt", ec);
+                std::filesystem::remove("main/Data/User_data/highscore_word.txt", ec);
+                hud.setHighScore(0);
+                scoresCleared = true;
+                refreshSettings();
+                break;
+            }
             case Menus::BtnQuitYes:    window.close(); break;
             case Menus::BtnQuitCancel: showQuitConfirm = false; break;
             case Menus::BtnInfo:   showInfo = true;  break;
@@ -410,6 +426,46 @@ static int gameMain()
             case GameState::LevelClear:  return passVisible ? &passPanel : nullptr;
             default:                     return nullptr;
         }
+    };
+
+    // ---- Gamepad in the menus ----
+    int joyX = 0, joyY = 0;                  // last stick / D-pad direction (-1, 0, 1): react once per push
+
+    auto menuNav = [&](int delta) {          // previous / next button
+        Panel* nav = activePanel();
+        if (nav && nav != &hudPanel) nav->keyNavigate(delta);
+    };
+
+    auto menuConfirm = [&]() {               // A: use the highlighted button, or the screen's main action
+        Panel* nav = activePanel();
+        if (nav && nav != &hudPanel && nav->focusedId() > 0) {
+            int id = nav->focusedId();
+            startLock = std::max(startLock, 0.4f);
+            onButton(id);
+            return;
+        }
+        if (showQuitConfirm) return;
+        if (gameState == GameState::Loading || gameState == GameState::Cutscene) skipLoading = true;
+        else if (gameState == GameState::WordSpin) skipSpin = true;
+        else if (paused) setPausedState(false);
+        else if (gameState == GameState::DeathScreen) startNewGame();
+        else if (gameState == GameState::LevelClear && passVisible) nextLevelRequested = true;
+        else if (gameState == GameState::Title && startLock <= 0.f) {
+            if (showWordSlot) { if (slot.finished()) onButton(Menus::BtnPlayWord); }
+            else if (showModeSelect) classicRequested = true;
+            else if (!showInfo && !showSettings) onButton(Menus::BtnPlay);
+        }
+    };
+
+    auto menuBack = [&]() {                  // B: one step back
+        if (showQuitConfirm)      showQuitConfirm = false;
+        else if (showSettings)    showSettings = false;
+        else if (showWordSlot)    onButton(Menus::BtnBack);
+        else if (showModeSelect)  { showModeSelect = false; modeComingSoon = false; }
+        else if (showInfo)        showInfo = false;
+        else if (paused)          setPausedState(false);
+        else if (gameState == GameState::WordSpin) skipSpin = true;
+        else if (gameState == GameState::Loading || gameState == GameState::Cutscene) skipLoading = true;
     };
 
     while (window.isOpen())
@@ -487,13 +543,13 @@ static int gameMain()
                 }
                 if (key->code == sf::Keyboard::Key::F11 ||
                     (key->code == sf::Keyboard::Key::Enter && key->alt))
-                    { setFullscreen(!fullscreen); autoFullscreen = fullscreen; }
+                    { setFullscreen(!fullscreen); autoFullscreen = fullscreen; refreshSettings(); }
                 if (key->code == sf::Keyboard::Key::P && gameState == GameState::Playing) {
                     paused = !paused;
                     audio.setPaused(paused);
                     if (paused) Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
                 }
-                if (key->code == sf::Keyboard::Key::M) audio.toggleMute();
+                if (key->code == sf::Keyboard::Key::M) { audio.toggleMute(); refreshSettings(); }
                 if (key->code == sf::Keyboard::Key::M) {
                     volumeToast = 1.5f;
                     if (paused) Menus::buildPause(pausePanel, audio.volume() / 100.f, audio.muted());
@@ -523,6 +579,38 @@ static int gameMain()
                     if (paused) setPausedState(false);
                     else if (gameState == GameState::DeathScreen) startNewGame();
                     else if (gameState == GameState::LevelClear && passVisible) nextLevelRequested = true;
+                }
+            }
+
+            if (const auto* jb = event->getIf<sf::Event::JoystickButtonPressed>()) {
+                if (jb->button == 0)      menuConfirm();                          // A
+                else if (jb->button == 1) menuBack();                             // B
+                else if (jb->button == 7) {                                       // Start: pause / resume
+                    if (paused) setPausedState(false);
+                    else if (gameState == GameState::Playing) setPausedState(true);
+                }
+            }
+
+            if (const auto* jm = event->getIf<sf::Event::JoystickMoved>()) {
+                using Axis = sf::Joystick::Axis;
+                int dx = joyX, dy = joyY;
+                if (jm->axis == Axis::X || jm->axis == Axis::PovX)
+                    dx = jm->position < -50.f ? -1 : (jm->position > 50.f ? 1 : 0);
+                if (jm->axis == Axis::Y)
+                    dy = jm->position < -50.f ? -1 : (jm->position > 50.f ? 1 : 0);
+                if (jm->axis == Axis::PovY)                       // D-pad: up is positive
+                    dy = jm->position > 50.f ? -1 : (jm->position < -50.f ? 1 : 0);
+
+                if (dx != joyX) {
+                    joyX = dx;
+                    if (dx != 0) {
+                        if (paused || showSettings) changeVolume(dx > 0 ? 5.f : -5.f);   // left/right = volume
+                        else                        menuNav(dx);
+                    }
+                }
+                if (dy != joyY) {
+                    joyY = dy;
+                    if (dy != 0) menuNav(dy);
                 }
             }
 
@@ -694,28 +782,6 @@ static int gameMain()
             Menus::buildDeath(deathPanel, eatSystem.getScore(), hud.highScore(), level);
             gameState = GameState::DeathScreen;
             stateTimer = 0.f;
-        }
-
-        // After GAME OVER the game returns to the home page
-        if (gameState == GameState::GameOver && stateTimer >= 4.0f) {
-            hud.saveHighScore(highScorePath());
-            title.reset();
-            gameState = GameState::Title;
-            stateTimer = 0.f;
-        }
-
-        // GAME OVER for 4 seconds, then a new game
-        if (gameState == GameState::GameOver && stateTimer >= 4.0f) {
-            hud.saveHighScore(highScorePath());
-            eatSystem.reset();                     // dots back, score 0
-            lives = 3;
-            enemies.reset();
-            player.revive();
-            player.setPosition(gameMap.getPosition() + sf::Vector2f(112.f, 188.f) * gameMap.getScale());
-            player.setDirection(Direction::Left);
-            firstStart = true;
-            stateTimer = 0.f;
-            gameState = GameState::Ready;
         }
 
         if (gameState == GameState::LevelClear) {
