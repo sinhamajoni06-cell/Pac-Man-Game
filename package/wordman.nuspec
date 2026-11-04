@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>wordman</id>
+    <version>0.0.0</version>
+    <title>Word-Man</title>
+    <authors>sinhamajoni06-cell</authors>
+    <owners>sinhamajoni06-cell</owners>
+    <projectUrl>https://github.com/sinhamajoni06-cell/Pac-Man-Game</projectUrl>
+    <repository type="git" url="https://github.com/sinhamajoni06-cell/Pac-Man-Game" />
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Word-Man is a Pac-Man game with a word-finding mode: collect the letters of a secret word in the maze while the ghosts chase you. This package installs the Windows game with the official installer.</description>
+    <summary>Pac-Man meets word finding (Windows installer)</summary>
+    <tags>wordman game pacman arcade word sfml</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
