@@ -8,14 +8,14 @@ The game with mixer of word finding genre!
     <img src="https://github.com/sinhamajoni06-cell/Pac-Man-Game/blob/main/main/assets/graphic/game/logo.png?raw=true" alt="Word-Man logo" width="140">
   </a>
   <br>
-  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.2.1/Wordman_v-0.2.1.zip">
+  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.2.2/Wordman-Setup-v0.2.2.exe">
     <img src="https://img.shields.io/badge/%E2%96%B6%20%20DOWNLOAD%20FOR%20WINDOWS-FFCC00?style=for-the-badge" alt="Download Word-Man for Windows" width="300">
   </a>
   <br><br>
   <b>Eat the dots. Dodge the ghosts. Beat the high score.</b>
   <br><br>
-  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.2.1">
-    <img src="https://img.shields.io/badge/version-0.2.1-E63946?style=flat-square" alt="Version 0.2.1">
+  <a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.2.2">
+    <img src="https://img.shields.io/badge/version-0.2.2-E63946?style=flat-square" alt="Version 0.2.1">
   </a>
   <img src="https://img.shields.io/badge/platform-Windows-2979FF?style=flat-square" alt="Windows">
   <img src="https://img.shields.io/badge/made%20with-C%2B%2B%20%2B%20SFML-FFCC00?style=flat-square" alt="C++ and SFML">
@@ -42,8 +42,8 @@ The game with mixer of word finding genre!
     <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/archive/refs/heads/main.zip">Download</a></td>
   </tr>
   </tr>
-    <td align="left"><b>Word-Man(v0.2.1)</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.2.1"><code>Word-Man.zip</code></a>)</td>
-    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.2.1/Wordman_v-0.2.1.zip">Download</a></td>
+    <td align="left"><b>Word-Man(v0.2.2)</b>: (<a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/tag/0.2.2"><code>Word-Man.zip</code></a>)</td>
+    <td align="right"><a href="https://github.com/sinhamajoni06-cell/Pac-Man-Game/releases/download/0.2.2/Wordman-0.2.2.zip">Download</a></td>
   </tr>
   </tr>
     <td align="left"><b>G++ Installation and Setup</b></td>
