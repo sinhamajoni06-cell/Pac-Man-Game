@@ -1,0 +1,81 @@
+# Publishes the npm package "@sinhamajoni06-cell/wordman" to GitHub Packages (and to npmjs.com
+# if you add an NPM_TOKEN secret).
+#
+# It runs when you publish a release. The release must already contain the installer
+# (Wordman-Setup-vX.Y.Z.exe). The package stores that file's address and SHA-256 hash, and the
+# command line tool checks the hash after downloading. You can also start it by hand from the
+# Actions tab (type the tag, for example 0.2.2).
+name: Publish npm package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag that has the installer attached (for example 0.2.2)"
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  npm:
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Work out the tag and the version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          if [ -z "$TAG" ]; then TAG="${{ inputs.tag }}"; fi
+          if [ -z "$TAG" ]; then echo "No release tag given."; exit 1; fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - name: Download the installer from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "Wordman-Setup-*.exe" --dir dl
+          FILE=$(ls dl/Wordman-Setup-*.exe | head -n 1)
+          if [ -z "$FILE" ]; then echo "Release $TAG has no Wordman-Setup-*.exe file attached."; exit 1; fi
+          echo "INSTALLER_NAME=$(basename "$FILE")" >> "$GITHUB_ENV"
+          echo "CHECKSUM=$(sha256sum "$FILE" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Write the release information into the package
+        working-directory: npm-package
+        run: |
+          cat > lib/release.json <<JSON
+          {
+            "tag": "$TAG",
+            "file": "$INSTALLER_NAME",
+            "url": "https://github.com/${{ github.repository }}/releases/download/$TAG/$INSTALLER_NAME",
+            "sha256": "$CHECKSUM"
+          }
+          JSON
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Check the package contents
+        working-directory: npm-package
+        run: npm pack --dry-run
+
+      - name: Publish to GitHub Packages
+        working-directory: npm-package
+        run: |
+          npm config set //npm.pkg.github.com/:_authToken "${{ secrets.GITHUB_TOKEN }}"
+          npm publish --registry=https://npm.pkg.github.com
+
+      - name: Publish to npmjs.com (only if an NPM_TOKEN secret exists)
+        if: env.NPM_TOKEN != ''
+        working-directory: npm-package
+        run: |
+          npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          npm publish --registry=https://registry.npmjs.org/ --access public
