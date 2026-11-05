@@ -26,11 +26,11 @@ jobs:
     env:
       NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Work out the tag and the version
         run: |
@@ -71,11 +71,31 @@ jobs:
         working-directory: npm-package
         run: |
           npm config set //npm.pkg.github.com/:_authToken "${{ secrets.GITHUB_TOKEN }}"
-          npm publish --registry=https://npm.pkg.github.com
+          set +e
+          OUT=$(npm publish --registry=https://npm.pkg.github.com 2>&1)
+          CODE=$?
+          echo "$OUT"
+          if [ $CODE -ne 0 ]; then
+            if echo "$OUT" | grep -qiE "cannot publish over|previously published|409|already exists"; then
+              echo "Version $VERSION is already published - nothing to do."
+              exit 0
+            fi
+            exit $CODE
+          fi
 
       - name: Publish to npmjs.com (only if an NPM_TOKEN secret exists)
         if: env.NPM_TOKEN != ''
         working-directory: npm-package
         run: |
           npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
-          npm publish --registry=https://registry.npmjs.org/ --access public
+          set +e
+          OUT=$(npm publish --registry=https://registry.npmjs.org/ --access public 2>&1)
+          CODE=$?
+          echo "$OUT"
+          if [ $CODE -ne 0 ]; then
+            if echo "$OUT" | grep -qiE "cannot publish over|previously published|403|already exists"; then
+              echo "Version $VERSION is already published - nothing to do."
+              exit 0
+            fi
+            exit $CODE
+          fi
