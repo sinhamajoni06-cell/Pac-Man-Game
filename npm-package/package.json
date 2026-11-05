@@ -1,0 +1,39 @@
+{
+  "name": "@sinhamajoni06-cell/wordman",
+  "version": "0.0.0",
+  "description": "Word-Man: Pac-Man meets word finding. Installs the Windows game from the official release.",
+  "bin": {
+    "wordman": "bin/wordman.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "README.md"
+  ],
+  "os": [
+    "win32"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "game",
+    "pacman",
+    "arcade",
+    "word",
+    "wordman",
+    "windows"
+  ],
+  "homepage": "https://github.com/sinhamajoni06-cell/Pac-Man-Game",
+  "bugs": {
+    "url": "https://github.com/sinhamajoni06-cell/Pac-Man-Game/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sinhamajoni06-cell/Pac-Man-Game.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "license": "UNLICENSED"
+}
